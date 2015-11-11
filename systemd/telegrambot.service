@@ -1,0 +1,16 @@
+[Unit]
+Description=telegram bot
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=meinside
+Group=meinside
+WorkingDirectory=/path/to/telegram-bot-transmission
+ExecStart=/path/to/telegram-bot-transmission/telegrambot
+Restart=always
+Environment=
+
+[Install]
+WantedBy=multi-user.target

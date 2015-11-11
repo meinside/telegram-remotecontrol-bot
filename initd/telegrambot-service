@@ -17,7 +17,7 @@
 ### END INIT INFO
 
 # change following path
-BOT_DIR=/home/some_user/srcs/go/src/github.com/meinside/telegram-bot-transmission
+BOT_DIR=/path/to/telegram-bot-transmission
 
 NAME=telegrambot
 DAEMON=$BOT_DIR/$NAME
