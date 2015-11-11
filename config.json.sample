@@ -8,5 +8,6 @@
 		"telegram_id_1",
 		"telegram_id_2",
 		"telegram_id_3"
-	]
+	],
+	"is_verbose": false
 }

@@ -26,6 +26,7 @@ type Config struct {
 	CertFilename string   `json:"cert_filename"`
 	KeyFilename  string   `json:"key_filename"`
 	AvailableIds []string `json:"available_ids"`
+	IsVerbose    bool     `json:"is_verbose"`
 }
 
 const (
@@ -69,6 +70,7 @@ type SessionPool struct {
 // variables
 var apiToken, webhookHost, certFilename, keyFilename string
 var webhookPort int
+var isVerbose bool
 var availableIds []string
 var pool SessionPool
 
@@ -83,6 +85,7 @@ func init() {
 			certFilename = conf.CertFilename
 			keyFilename = conf.KeyFilename
 			availableIds = conf.AvailableIds
+			isVerbose = conf.IsVerbose
 
 			// initialize variables
 			sessions := make(map[string]Session)
@@ -289,7 +292,7 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 
 func main() {
 	client := bot.NewClient(apiToken)
-	client.Verbose = true
+	client.Verbose = isVerbose
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
