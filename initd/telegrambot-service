@@ -1,0 +1,54 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          telegrambot-service
+# Required-Start:    networking
+# Required-Stop:     networking
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: init.d script for telegram bot
+# Description:       
+# 
+#  telegram bot's init.d script
+# 
+#  last update: 2015.11.11.
+# 
+#  meinside@gmail.com
+#                    
+### END INIT INFO
+
+# change following path
+BOT_DIR=/home/some_user/srcs/go/src/github.com/meinside/telegram-bot-transmission
+
+NAME=telegrambot
+DAEMON=$BOT_DIR/$NAME
+DESC="Telegram Bot service"
+
+# exit if not executable
+test -x $DAEMON || exit 0
+
+case "$1" in
+  start)
+    echo -n "Starting $DESC: "
+    start-stop-daemon --start --quiet --background --make-pidfile --pidfile /var/run/$NAME.pid --exec $DAEMON || true
+    echo "$NAME."
+    ;;
+  stop)
+    echo -n "Stopping $DESC: "
+    start-stop-daemon --stop --quiet --pidfile /var/run/$NAME.pid || true
+    echo "$NAME."
+    ;;
+  restart)
+    echo -n "Restarting $DESC: "
+    start-stop-daemon --stop --quiet --pidfile /var/run/$NAME.pid || true
+    sleep 1
+    start-stop-daemon --start --quiet --background --make-pidfile --pidfile /var/run/$NAME.pid --exec $DAEMON || true
+    echo "$NAME."
+    ;;
+  *)
+    N=/etc/init.d/$NAME
+    echo "Usage: $N {start|stop|restart}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
