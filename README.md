@@ -71,7 +71,7 @@ $ sudo cp systemd/telegrambot.service /lib/systemd/system/
 $ sudo vi /lib/systemd/system/telegrambot.service
 ```
 
-and edit **WorkingDirectory** and **ExecStart** values.
+and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
 
 It will launch automatically on boot with:
 

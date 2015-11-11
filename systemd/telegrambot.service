@@ -5,11 +5,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=meinside
-Group=meinside
+User=some_user
+Group=some_user
 WorkingDirectory=/path/to/telegram-bot-transmission
 ExecStart=/path/to/telegram-bot-transmission/telegrambot
 Restart=always
+RestartSec=5
 Environment=
 
 [Install]
