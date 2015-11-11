@@ -59,7 +59,7 @@ $ sudo service telegrambot-service start
 or set it up to launch on every boot automatically:
 
 ```
-$ sudo update-rc.d telegrambot defaults
+$ sudo update-rc.d telegrambot-service defaults
 ```
 
 ## 998. Trouble shooting
