@@ -6,6 +6,8 @@ You can list/add/remove torrents from your Transmission daemon remotely.
 
 Install go and generate your Telegram bot's API token.
 
+Also, generate self-signed certificate and private key with [this guide](https://core.telegram.org/bots/self-signed).
+
 ## 1. Install
 
 ```bash
