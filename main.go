@@ -15,7 +15,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151111"
+	BotVersion = "0.0.1.20151117"
 )
 
 // struct for config file
@@ -305,7 +305,7 @@ func main() {
 				if success {
 					processWebhook(client, webhook)
 				} else {
-					fmt.Printf("*** Error while receiving webhook (%s)\n", err.Error)
+					fmt.Printf("*** Error while receiving webhook (%s)\n", err.Error())
 				}
 			})
 		} else {
