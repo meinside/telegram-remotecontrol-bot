@@ -15,7 +15,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151117"
+	BotVersion = "0.0.1.20151129"
 )
 
 // struct for config file
@@ -123,9 +123,9 @@ Following commands are supported:
 
 * For Transmission
 
-/trlist   : show torrent list
-/tradd    : add torrent with url or magnet
-/trremove : remove torrent from list
+/list   : show torrent list
+/add    : add torrent with url or magnet
+/remove : remove torrent from list
 
 * Others
 
