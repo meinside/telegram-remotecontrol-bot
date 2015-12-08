@@ -168,8 +168,13 @@ func removeTransmissionTorrent(number string) string {
 
 // for processing incoming webhook from Telegram
 func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
-	userId := *webhook.Message.From.Username
-
+	// check username
+	var userId string
+	if webhook.Message.From.Username == nil {
+		fmt.Printf("*** Not allowed (no user name): %s\n", *webhook.Message.From.FirstName)
+		return false
+	}
+	userId = *webhook.Message.From.Username
 	if !isAvailableId(userId) {
 		fmt.Printf("*** Id not allowed: %s\n", userId)
 		return false
