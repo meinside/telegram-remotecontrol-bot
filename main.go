@@ -16,7 +16,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151208"
+	BotVersion = "0.0.1.20151217"
 )
 
 // struct for config file
