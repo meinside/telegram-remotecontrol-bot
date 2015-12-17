@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"strings"
 	"sync"
@@ -64,7 +65,7 @@ type Session struct {
 
 type SessionPool struct {
 	Sessions map[string]Session
-	Mutex    sync.Mutex
+	sync.Mutex
 }
 
 // variables
@@ -171,12 +172,12 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 	// check username
 	var userId string
 	if webhook.Message.From.Username == nil {
-		fmt.Printf("*** Not allowed (no user name): %s\n", *webhook.Message.From.FirstName)
+		log.Printf("*** Not allowed (no user name): %s\n", *webhook.Message.From.FirstName)
 		return false
 	}
 	userId = *webhook.Message.From.Username
 	if !isAvailableId(userId) {
-		fmt.Printf("*** Id not allowed: %s\n", userId)
+		log.Printf("*** Id not allowed: %s\n", userId)
 		return false
 	}
 
@@ -184,7 +185,7 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 	result := false
 
 	if session, exists := pool.Sessions[userId]; exists {
-		pool.Mutex.Lock()
+		pool.Lock()
 
 		// text from message
 		var txt string
@@ -284,12 +285,12 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 		if sent := client.SendMessage(webhook.Message.Chat.Id, &message, options); sent.Ok {
 			result = true
 		} else {
-			fmt.Printf("*** Failed to send message: %s\n", *sent.Description)
+			log.Printf("*** Failed to send message: %s\n", *sent.Description)
 		}
 
-		pool.Mutex.Unlock()
+		pool.Unlock()
 	} else {
-		fmt.Printf("*** Session does not exist for id: %s\n", userId)
+		log.Printf("*** Session does not exist for id: %s\n", userId)
 	}
 
 	return result
@@ -301,16 +302,16 @@ func main() {
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
-		fmt.Printf("Launching bot: @%s (%s)\n", *me.Result.Username, *me.Result.FirstName)
+		log.Printf("Launching bot: @%s (%s)\n", *me.Result.Username, *me.Result.FirstName)
 
 		// set webhook url
 		if hooked := client.SetWebhook(webhookHost, webhookPort, certFilename); hooked.Ok {
 			// on success, start webhook server
-			client.StartWebhookServerAndWait(certFilename, keyFilename, func(webhook bot.Webhook, success bool, err error) {
-				if success {
+			client.StartWebhookServerAndWait(certFilename, keyFilename, func(webhook bot.Webhook, err error) {
+				if err == nil {
 					processWebhook(client, webhook)
 				} else {
-					fmt.Printf("*** Error while receiving webhook (%s)\n", err.Error())
+					log.Printf("*** Error while receiving webhook (%s)\n", err.Error())
 				}
 			})
 		} else {
