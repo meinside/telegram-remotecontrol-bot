@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
 	bot "github.com/meinside/telegram-bot-go"
 )
@@ -141,7 +142,12 @@ Following commands are supported:
 
 // for showing the version of this bot
 func getVersion() string {
-	return fmt.Sprintf("Bot version: %s", BotVersion)
+	uptimeSeconds := getUptime()
+	numDays := uptimeSeconds / (60 * 60 * 24)
+	numHours := (uptimeSeconds % (60 * 60 * 24)) / (60 * 60)
+	uptime := fmt.Sprintf("%d day(s) %d hour(s)", numDays, numHours)
+
+	return fmt.Sprintf("Bot version: %s\nUptime: %s", BotVersion, uptime)
 }
 
 // for showing the list of transmission
@@ -178,6 +184,14 @@ func deleteTransmissionTorrent(number string) string {
 	} else {
 		return fmt.Sprintf("Failed to delete from transmission list - %s", string(output))
 	}
+}
+
+// get uptime of this bot in seconds
+func getUptime() (seconds int) {
+	now := time.Now()
+	gap := now.Sub(launched)
+
+	return int(gap.Seconds())
 }
 
 // for processing incoming webhook from Telegram
@@ -335,7 +349,11 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 	return result
 }
 
+var launched time.Time
+
 func main() {
+	launched = time.Now()
+
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
 
