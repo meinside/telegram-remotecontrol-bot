@@ -16,7 +16,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151217"
+	BotVersion = "0.0.1.20151222"
 )
 
 // struct for config file
@@ -189,7 +189,7 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 
 		// text from message
 		var txt string
-		if webhook.Message.Text != nil {
+		if webhook.Message.HasText() {
 			txt = *webhook.Message.Text
 		} else {
 			txt = ""
