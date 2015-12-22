@@ -32,10 +32,11 @@ type Config struct {
 
 const (
 	// messages
-	DefaultMessage            = "Input your command."
+	DefaultMessage            = "Input your command:"
 	MessageUnknownCommand     = "Unknown command."
-	MessageTransmissionUpload = "Input magnet, url, or file of target torrent."
-	MessageTransmissionRemove = "Input the number of torrent to remove from the list."
+	MessageTransmissionUpload = "Input magnet, url, or file of target torrent:"
+	MessageTransmissionRemove = "Input the number of torrent to remove from the list:"
+	MessageTransmissionDelete = "Input the number of torrent to delete from the list and local storage:"
 	MessageCanceled           = "Canceled."
 
 	// commands
@@ -48,6 +49,7 @@ const (
 	CommandTransmissionList   = "/list"
 	CommandTransmissionAdd    = "/add"
 	CommandTransmissionRemove = "/remove"
+	CommandTransmissionDelete = "/delete"
 )
 
 type Status int16
@@ -56,6 +58,7 @@ const (
 	StatusWaiting                   Status = iota
 	StatusWaitingTransmissionUpload Status = iota
 	StatusWaitingTransmissionRemove Status = iota
+	StatusWaitingTransmissionDelete Status = iota
 )
 
 type Session struct {
@@ -127,6 +130,7 @@ Following commands are supported:
 /list   : show torrent list
 /add    : add torrent with url or magnet
 /remove : remove torrent from list
+/delete : remove torrent and delete data
 
 * Others
 
@@ -167,6 +171,15 @@ func removeTransmissionTorrent(number string) string {
 	}
 }
 
+// for removing a torrent and its local data from the list of transmission
+func deleteTransmissionTorrent(number string) string {
+	if output, err := exec.Command("transmission-remote", "-t", number, "--remove-and-delete").CombinedOutput(); err == nil {
+		return "Given torrent and its data were successfully deleted."
+	} else {
+		return fmt.Sprintf("Failed to delete from transmission list - %s", string(output))
+	}
+}
+
 // for processing incoming webhook from Telegram
 func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 	// check username
@@ -199,7 +212,7 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 		var options map[string]interface{} = map[string]interface{}{
 			"reply_markup": bot.ReplyKeyboardMarkup{
 				Keyboard: [][]string{
-					[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove},
+					[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
 					[]string{CommandVersion, CommandHelp},
 				},
 			},
@@ -242,6 +255,19 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 						},
 					},
 				}
+			case strings.HasPrefix(txt, CommandTransmissionDelete):
+				message = MessageTransmissionDelete
+				pool.Sessions[userId] = Session{
+					UserId:        userId,
+					CurrentStatus: StatusWaitingTransmissionDelete,
+				}
+				options = map[string]interface{}{
+					"reply_markup": bot.ReplyKeyboardMarkup{
+						Keyboard: [][]string{
+							[]string{CommandCancel},
+						},
+					},
+				}
 			default:
 				message = fmt.Sprintf("%s: %s", txt, MessageUnknownCommand)
 			}
@@ -272,6 +298,19 @@ func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
 				message = MessageCanceled
 			default:
 				message = removeTransmissionTorrent(txt)
+			}
+
+			// reset status
+			pool.Sessions[userId] = Session{
+				UserId:        userId,
+				CurrentStatus: StatusWaiting,
+			}
+		case StatusWaitingTransmissionDelete:
+			switch {
+			case strings.HasPrefix(txt, CommandCancel):
+				message = MessageCanceled
+			default:
+				message = deleteTransmissionTorrent(txt)
 			}
 
 			// reset status
