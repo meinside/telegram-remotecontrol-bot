@@ -17,21 +17,19 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151223"
+	BotVersion = "0.0.2.20151223"
 )
 
 // struct for config file
 type Config struct {
 	ApiToken     string   `json:"api_token"`
-	WebhookHost  string   `json:"webhook_host"`
-	WebhookPort  int      `json:"webhook_port"`
-	CertFilename string   `json:"cert_filename"`
-	KeyFilename  string   `json:"key_filename"`
 	AvailableIds []string `json:"available_ids"`
 	IsVerbose    bool     `json:"is_verbose"`
 }
 
 const (
+	MonitorIntervalSeconds = 3
+
 	// messages
 	DefaultMessage            = "Input your command:"
 	MessageUnknownCommand     = "Unknown command."
@@ -73,8 +71,7 @@ type SessionPool struct {
 }
 
 // variables
-var apiToken, webhookHost, certFilename, keyFilename string
-var webhookPort int
+var apiToken string
 var isVerbose bool
 var availableIds []string
 var pool SessionPool
@@ -85,10 +82,6 @@ func init() {
 		var conf Config
 		if err := json.Unmarshal(file, &conf); err == nil {
 			apiToken = conf.ApiToken
-			webhookHost = conf.WebhookHost
-			webhookPort = conf.WebhookPort
-			certFilename = conf.CertFilename
-			keyFilename = conf.KeyFilename
 			availableIds = conf.AvailableIds
 			isVerbose = conf.IsVerbose
 
@@ -361,18 +354,20 @@ func main() {
 	if me := client.GetMe(); me.Ok {
 		log.Printf("Launching bot: @%s (%s)\n", *me.Result.Username, *me.Result.FirstName)
 
-		// set webhook url
-		if hooked := client.SetWebhook(webhookHost, webhookPort, certFilename); hooked.Ok {
-			// on success, start webhook server
-			client.StartWebhookServerAndWait(certFilename, keyFilename, func(webhook bot.Update, err error) {
+		// delete webhook (getting updates will not work when wehbook is set up)
+		if unhooked := client.DeleteWebhook(); unhooked.Ok {
+			// wait for new updates
+			client.StartMonitoringUpdates(0, MonitorIntervalSeconds, func(update bot.Update, err error) {
 				if err == nil {
-					processWebhook(client, webhook)
+					if update.Message != nil {
+						processWebhook(client, update)
+					}
 				} else {
-					log.Printf("*** Error while receiving webhook (%s)\n", err.Error())
+					log.Printf("*** Error while receiving update (%s)\n", err.Error())
 				}
 			})
 		} else {
-			panic("Failed to set webhook")
+			panic("Failed to delete webhook")
 		}
 	} else {
 		panic("Failed to get info of the bot")

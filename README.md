@@ -4,9 +4,7 @@ You can list/add/remove torrents from your Transmission daemon remotely.
 
 ## 0. Prepare
 
-Install go and generate your Telegram bot's API token.
-
-Also, generate self-signed certificate and private key with [this guide](https://core.telegram.org/bots/self-signed).
+Install Go and generate your Telegram bot's API token.
 
 ## 1. Install
 
@@ -23,10 +21,6 @@ and edit values to yours:
 ```json
 {
 	"api_token": "0123456789:abcdefghijklmnopqrstuvwyz-x-0a1b2c3d4e",
-	"webhook_host": "my.host.somewhere.com",
-	"webhook_port": 443,
-	"cert_filename": "cert/my_cert.pem",
-	"key_filename":"cert/my_cert.key",
 	"available_ids": [
 		"telegram_id_1",
 		"telegram_id_2",
@@ -41,7 +35,11 @@ and edit values to yours:
 $ go build -o telegrambot main.go
 ```
 
-and run it.
+and run it:
+
+```bash
+$ ./telegrambot
+```
 
 ## 3. Run as a service
 
@@ -89,7 +87,7 @@ $ sudo systemctl start telegrambot.service
 
 ## 998. Trouble shooting
 
-If it doesn't work as expected, check if your port is opened publicly. Port should be one of 80, 88, 443, or 8443.
+TODO
 
 ## 999. License
 
