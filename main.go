@@ -17,7 +17,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.1.20151222"
+	BotVersion = "0.0.1.20151223"
 )
 
 // struct for config file
@@ -195,7 +195,7 @@ func getUptime() (seconds int) {
 }
 
 // for processing incoming webhook from Telegram
-func processWebhook(client *bot.Bot, webhook bot.Webhook) bool {
+func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 	// check username
 	var userId string
 	if webhook.Message.From.Username == nil {
@@ -364,7 +364,7 @@ func main() {
 		// set webhook url
 		if hooked := client.SetWebhook(webhookHost, webhookPort, certFilename); hooked.Ok {
 			// on success, start webhook server
-			client.StartWebhookServerAndWait(certFilename, keyFilename, func(webhook bot.Webhook, err error) {
+			client.StartWebhookServerAndWait(certFilename, keyFilename, func(webhook bot.Update, err error) {
 				if err == nil {
 					processWebhook(client, webhook)
 				} else {
