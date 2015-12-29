@@ -6,18 +6,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	bot "github.com/meinside/telegram-bot-go"
+
+	"github.com/meinside/telegram-bot-transmission/helper"
 )
 
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.2.20151223"
+	BotVersion = "0.0.2.20151229"
 )
 
 // struct for config file
@@ -29,19 +30,14 @@ type Config struct {
 
 const (
 	MonitorIntervalSeconds = 3
+)
 
-	// messages
-	DefaultMessage            = "Input your command:"
-	MessageUnknownCommand     = "Unknown command."
-	MessageTransmissionUpload = "Input magnet, url, or file of target torrent:"
-	MessageTransmissionRemove = "Input the number of torrent to remove from the list:"
-	MessageTransmissionDelete = "Input the number of torrent to delete from the list and local storage:"
-	MessageCanceled           = "Canceled."
-
+const (
 	// commands
 	CommandStart   = "/start"
 	CommandHelp    = "/help"
 	CommandVersion = "/version"
+	CommandStatus  = "/status"
 	CommandCancel  = "/cancel"
 
 	// commands for transmission
@@ -49,6 +45,16 @@ const (
 	CommandTransmissionAdd    = "/add"
 	CommandTransmissionRemove = "/remove"
 	CommandTransmissionDelete = "/delete"
+)
+
+const (
+	// messages
+	DefaultMessage            = "Input your command:"
+	MessageUnknownCommand     = "Unknown command."
+	MessageTransmissionUpload = "Input magnet, url, or file of target torrent:"
+	MessageTransmissionRemove = "Input the number of torrent to remove from the list:"
+	MessageTransmissionDelete = "Input the number of torrent to delete from the list and local storage:"
+	MessageCanceled           = "Canceled."
 )
 
 type Status int16
@@ -75,8 +81,11 @@ var apiToken string
 var isVerbose bool
 var availableIds []string
 var pool SessionPool
+var launched time.Time
 
 func init() {
+	launched = time.Now()
+
 	// read variables from config file
 	if file, err := ioutil.ReadFile(ConfigFilename); err == nil {
 		var conf Config
@@ -129,62 +138,19 @@ Following commands are supported:
 * Others
 
 /version  : show this bot's version
+/status   : show this bot's status
 /help     : show this help message
 `
 }
 
 // for showing the version of this bot
 func getVersion() string {
-	uptimeSeconds := getUptime()
-	numDays := uptimeSeconds / (60 * 60 * 24)
-	numHours := (uptimeSeconds % (60 * 60 * 24)) / (60 * 60)
-	uptime := fmt.Sprintf("%d day(s) %d hour(s)", numDays, numHours)
-
-	return fmt.Sprintf("Bot version: %s\nUptime: %s", BotVersion, uptime)
+	return fmt.Sprintf("Bot version: %s", BotVersion)
 }
 
-// for showing the list of transmission
-func getTransmissionList() string {
-	if output, err := exec.Command("transmission-remote", "-l").CombinedOutput(); err == nil {
-		return string(output)
-	} else {
-		return fmt.Sprintf("Failed to get transmission list - %s", string(output))
-	}
-}
-
-// for adding a torrent to the list of transmission
-func addTransmissionTorrent(torrent string) string {
-	if output, err := exec.Command("transmission-remote", "-a", torrent).CombinedOutput(); err == nil {
-		return "Given torrent was successfully added to the list."
-	} else {
-		return fmt.Sprintf("Failed to add to transmission list - %s", string(output))
-	}
-}
-
-// for canceling/removing a torrent from the list of transmission
-func removeTransmissionTorrent(number string) string {
-	if output, err := exec.Command("transmission-remote", "-t", number, "-r").CombinedOutput(); err == nil {
-		return "Given torrent was successfully removed from the list."
-	} else {
-		return fmt.Sprintf("Failed to remove from transmission list - %s", string(output))
-	}
-}
-
-// for removing a torrent and its local data from the list of transmission
-func deleteTransmissionTorrent(number string) string {
-	if output, err := exec.Command("transmission-remote", "-t", number, "--remove-and-delete").CombinedOutput(); err == nil {
-		return "Given torrent and its data were successfully deleted."
-	} else {
-		return fmt.Sprintf("Failed to delete from transmission list - %s", string(output))
-	}
-}
-
-// get uptime of this bot in seconds
-func getUptime() (seconds int) {
-	now := time.Now()
-	gap := now.Sub(launched)
-
-	return int(gap.Seconds())
+// for showing current status of this bot
+func getStatus() string {
+	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", helper.GetUptime(launched), helper.GetMemoryUsage())
 }
 
 // for processing incoming webhook from Telegram
@@ -220,7 +186,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 			"reply_markup": bot.ReplyKeyboardMarkup{
 				Keyboard: [][]string{
 					[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
-					[]string{CommandVersion, CommandHelp},
+					[]string{CommandVersion, CommandStatus, CommandHelp},
 				},
 			},
 		}
@@ -234,8 +200,10 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 				message = getHelp()
 			case strings.HasPrefix(txt, CommandVersion):
 				message = getVersion()
+			case strings.HasPrefix(txt, CommandStatus):
+				message = getStatus()
 			case strings.HasPrefix(txt, CommandTransmissionList):
-				message = getTransmissionList()
+				message = helper.GetTransmissionList()
 			case strings.HasPrefix(txt, CommandTransmissionAdd):
 				message = MessageTransmissionUpload
 				pool.Sessions[userId] = Session{
@@ -291,7 +259,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 					torrent = txt
 				}
 
-				message = addTransmissionTorrent(torrent)
+				message = helper.AddTransmissionTorrent(torrent)
 			}
 
 			// reset status
@@ -304,7 +272,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 			case strings.HasPrefix(txt, CommandCancel):
 				message = MessageCanceled
 			default:
-				message = removeTransmissionTorrent(txt)
+				message = helper.RemoveTransmissionTorrent(txt)
 			}
 
 			// reset status
@@ -317,7 +285,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 			case strings.HasPrefix(txt, CommandCancel):
 				message = MessageCanceled
 			default:
-				message = deleteTransmissionTorrent(txt)
+				message = helper.DeleteTransmissionTorrent(txt)
 			}
 
 			// reset status
@@ -342,11 +310,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 	return result
 }
 
-var launched time.Time
-
 func main() {
-	launched = time.Now()
-
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
 
