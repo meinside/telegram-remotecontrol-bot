@@ -18,7 +18,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.2.20151229"
+	BotVersion = "0.0.3.20160112"
 )
 
 // struct for config file
@@ -154,7 +154,7 @@ func getStatus() string {
 }
 
 // for processing incoming webhook from Telegram
-func processWebhook(client *bot.Bot, webhook bot.Update) bool {
+func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 	// check username
 	var userId string
 	if webhook.Message.From.Username == nil {
@@ -253,8 +253,8 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 			default:
 				var torrent string
 				if webhook.Message.Document != nil {
-					fileResult := client.GetFile(webhook.Message.Document.FileId)
-					torrent = client.GetFileUrl(*fileResult.Result)
+					fileResult := b.GetFile(webhook.Message.Document.FileId)
+					torrent = b.GetFileUrl(*fileResult.Result)
 				} else {
 					torrent = txt
 				}
@@ -296,7 +296,7 @@ func processWebhook(client *bot.Bot, webhook bot.Update) bool {
 		}
 
 		// send message
-		if sent := client.SendMessage(webhook.Message.Chat.Id, &message, options); sent.Ok {
+		if sent := b.SendMessage(webhook.Message.Chat.Id, &message, options); sent.Ok {
 			result = true
 		} else {
 			log.Printf("*** Failed to send message: %s\n", *sent.Description)
@@ -321,10 +321,10 @@ func main() {
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
 			// wait for new updates
-			client.StartMonitoringUpdates(0, MonitorIntervalSeconds, func(update bot.Update, err error) {
+			client.StartMonitoringUpdates(0, MonitorIntervalSeconds, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {
 					if update.Message != nil {
-						processWebhook(client, update)
+						processWebhook(b, update)
 					}
 				} else {
 					log.Printf("*** Error while receiving update (%s)\n", err.Error())
