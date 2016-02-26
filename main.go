@@ -18,18 +18,19 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.3.20160112"
+	BotVersion = "0.0.4.20160226"
 )
 
 // struct for config file
 type Config struct {
-	ApiToken     string   `json:"api_token"`
-	AvailableIds []string `json:"available_ids"`
-	IsVerbose    bool     `json:"is_verbose"`
+	ApiToken        string   `json:"api_token"`
+	AvailableIds    []string `json:"available_ids"`
+	MonitorInterval int      `json:"monitor_interval"`
+	IsVerbose       bool     `json:"is_verbose"`
 }
 
 const (
-	MonitorIntervalSeconds = 3
+	DefaultMonitorIntervalSeconds = 3
 )
 
 const (
@@ -78,6 +79,7 @@ type SessionPool struct {
 
 // variables
 var apiToken string
+var monitorInterval int
 var isVerbose bool
 var availableIds []string
 var pool SessionPool
@@ -92,6 +94,10 @@ func init() {
 		if err := json.Unmarshal(file, &conf); err == nil {
 			apiToken = conf.ApiToken
 			availableIds = conf.AvailableIds
+			monitorInterval = conf.MonitorInterval
+			if monitorInterval <= 0 {
+				monitorInterval = DefaultMonitorIntervalSeconds
+			}
 			isVerbose = conf.IsVerbose
 
 			// initialize variables
@@ -321,7 +327,7 @@ func main() {
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
 			// wait for new updates
-			client.StartMonitoringUpdates(0, MonitorIntervalSeconds, func(b *bot.Bot, update bot.Update, err error) {
+			client.StartMonitoringUpdates(0, monitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {
 					if update.Message != nil {
 						processWebhook(b, update)
