@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/profile"
+
 	bot "github.com/meinside/telegram-bot-go"
 
 	"github.com/meinside/telegram-bot-transmission/helper"
@@ -18,7 +20,10 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.4.20160226"
+	BotVersion = "0.0.5.20160304"
+
+	//DoProfiling = true
+	DoProfiling = false
 )
 
 // struct for config file
@@ -87,6 +92,15 @@ var launched time.Time
 
 func init() {
 	launched = time.Now()
+
+	// for profiling
+	if DoProfiling {
+		defer profile.Start(
+			profile.BlockProfile,
+			profile.CPUProfile,
+			profile.MemProfile,
+		).Stop()
+	}
 
 	// read variables from config file
 	if file, err := ioutil.ReadFile(ConfigFilename); err == nil {
