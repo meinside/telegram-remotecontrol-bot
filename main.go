@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/profile"
 
-	bot "github.com/meinside/telegram-bot-go"
+	bot "github.com/meinside/telegram-bot-go" // https://github.com/meinside/telegram-bot-go/releases/tag/0.1.1
 
 	"github.com/meinside/telegram-bot-transmission/helper"
 )
@@ -20,7 +20,7 @@ import (
 const (
 	ConfigFilename = "config.json"
 
-	BotVersion = "0.0.5.20160304"
+	BotVersion = "0.0.5.20160321"
 
 	//DoProfiling = true
 	DoProfiling = false
