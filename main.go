@@ -14,7 +14,7 @@ import (
 
 	bot "github.com/meinside/telegram-bot-go" // https://github.com/meinside/telegram-bot-go/releases/tag/0.1.1
 
-	"github.com/meinside/telegram-bot-transmission/helper"
+	"./helper"
 )
 
 const (
