@@ -1,6 +1,8 @@
-# Telegram Bot for Controlling Transmission Remotely
+# Telegram Bot for Controlling Various Things Remotely
 
-You can list/add/remove torrents from your Transmission daemon remotely.
+With this bot, you can systemctl start/stop services
+
+and list/add/remove/delete torrents through your Transmission daemon.
 
 ## 0. Prepare
 
@@ -9,9 +11,8 @@ Install Go and generate your Telegram bot's API token.
 ## 1. Install
 
 ```bash
-$ go get -u github.com/meinside/telegram-bot-go
-$ go get -u github.com/meinside/telegram-bot-transmission
-$ cd $GOPOATH/src/github.com/meinside/telegram-bot-transmission
+$ go get -u github.com/meinside/telegram-bot-remotecontrol
+$ cd $GOPOATH/src/github.com/meinside/telegram-bot-remotecontrol
 $ cp config.json.sample config.json
 $ vi config.json
 ```
