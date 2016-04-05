@@ -6,21 +6,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/profile"
 
-	bot "github.com/meinside/telegram-bot-go" // https://github.com/meinside/telegram-bot-go/releases/tag/0.1.1
+	bot "github.com/meinside/telegram-bot-go"
 
-	"./helper"
+	"./services/transmission"
 )
 
 const (
 	ConfigFilename = "config.json"
-
-	BotVersion = "0.0.5.20160321"
 
 	//DoProfiling = true
 	DoProfiling = false
@@ -28,10 +27,11 @@ const (
 
 // struct for config file
 type Config struct {
-	ApiToken        string   `json:"api_token"`
-	AvailableIds    []string `json:"available_ids"`
-	MonitorInterval int      `json:"monitor_interval"`
-	IsVerbose       bool     `json:"is_verbose"`
+	ApiToken             string   `json:"api_token"`
+	AvailableIds         []string `json:"available_ids"`
+	ControllableServices []string `json:"controllable_services"`
+	MonitorInterval      int      `json:"monitor_interval"`
+	IsVerbose            bool     `json:"is_verbose"`
 }
 
 const (
@@ -40,11 +40,10 @@ const (
 
 const (
 	// commands
-	CommandStart   = "/start"
-	CommandHelp    = "/help"
-	CommandVersion = "/version"
-	CommandStatus  = "/status"
-	CommandCancel  = "/cancel"
+	CommandStart  = "/start"
+	CommandHelp   = "/help"
+	CommandStatus = "/status"
+	CommandCancel = "/cancel"
 
 	// commands for transmission
 	CommandTransmissionList   = "/list"
@@ -90,6 +89,16 @@ var availableIds []string
 var pool SessionPool
 var launched time.Time
 
+// keyboards
+var allKeyboards = [][]string{
+	[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
+	[]string{CommandStatus, CommandHelp},
+}
+var cancelKeyboard = [][]string{
+	[]string{CommandCancel},
+}
+
+// initialization
 func init() {
 	launched = time.Now()
 
@@ -148,40 +157,34 @@ func getHelp() string {
 	return `
 Following commands are supported:
 
-* For Transmission
+*For Transmission*
 
 /list   : show torrent list
 /add    : add torrent with url or magnet
 /remove : remove torrent from list
 /delete : remove torrent and delete data
 
-* Others
+*Others*
 
-/version  : show this bot's version
 /status   : show this bot's status
 /help     : show this help message
 `
 }
 
-// for showing the version of this bot
-func getVersion() string {
-	return fmt.Sprintf("Bot version: %s", BotVersion)
-}
-
 // for showing current status of this bot
 func getStatus() string {
-	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", helper.GetUptime(launched), helper.GetMemoryUsage())
+	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", getUptime(launched), getMemoryUsage())
 }
 
-// for processing incoming webhook from Telegram
-func processWebhook(b *bot.Bot, webhook bot.Update) bool {
+// for processing incoming update from Telegram
+func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
-	if webhook.Message.From.Username == nil {
-		log.Printf("*** Not allowed (no user name): %s\n", *webhook.Message.From.FirstName)
+	if update.Message.From.Username == nil {
+		log.Printf("*** Not allowed (no user name): %s\n", *update.Message.From.FirstName)
 		return false
 	}
-	userId = *webhook.Message.From.Username
+	userId = *update.Message.From.Username
 	if !isAvailableId(userId) {
 		log.Printf("*** Id not allowed: %s\n", userId)
 		return false
@@ -195,8 +198,8 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 
 		// text from message
 		var txt string
-		if webhook.Message.HasText() {
-			txt = *webhook.Message.Text
+		if update.Message.HasText() {
+			txt = *update.Message.Text
 		} else {
 			txt = ""
 		}
@@ -204,11 +207,10 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 		var message string
 		var options map[string]interface{} = map[string]interface{}{
 			"reply_markup": bot.ReplyKeyboardMarkup{
-				Keyboard: [][]string{
-					[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
-					[]string{CommandVersion, CommandStatus, CommandHelp},
-				},
+				Keyboard:       allKeyboards,
+				ResizeKeyboard: true,
 			},
+			"parse_mode": bot.ParseModeMarkdown,
 		}
 
 		switch session.CurrentStatus {
@@ -218,24 +220,19 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 				message = DefaultMessage
 			case strings.HasPrefix(txt, CommandHelp):
 				message = getHelp()
-			case strings.HasPrefix(txt, CommandVersion):
-				message = getVersion()
 			case strings.HasPrefix(txt, CommandStatus):
 				message = getStatus()
 			case strings.HasPrefix(txt, CommandTransmissionList):
-				message = helper.GetTransmissionList()
+				message = transmission.GetList()
 			case strings.HasPrefix(txt, CommandTransmissionAdd):
 				message = MessageTransmissionUpload
 				pool.Sessions[userId] = Session{
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionUpload,
 				}
-				options = map[string]interface{}{
-					"reply_markup": bot.ReplyKeyboardMarkup{
-						Keyboard: [][]string{
-							[]string{CommandCancel},
-						},
-					},
+				options["reply_markup"] = bot.ReplyKeyboardMarkup{
+					Keyboard:       cancelKeyboard,
+					ResizeKeyboard: true,
 				}
 			case strings.HasPrefix(txt, CommandTransmissionRemove):
 				message = MessageTransmissionRemove
@@ -243,12 +240,9 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionRemove,
 				}
-				options = map[string]interface{}{
-					"reply_markup": bot.ReplyKeyboardMarkup{
-						Keyboard: [][]string{
-							[]string{CommandCancel},
-						},
-					},
+				options["reply_markup"] = bot.ReplyKeyboardMarkup{
+					Keyboard:       cancelKeyboard,
+					ResizeKeyboard: true,
 				}
 			case strings.HasPrefix(txt, CommandTransmissionDelete):
 				message = MessageTransmissionDelete
@@ -256,15 +250,12 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionDelete,
 				}
-				options = map[string]interface{}{
-					"reply_markup": bot.ReplyKeyboardMarkup{
-						Keyboard: [][]string{
-							[]string{CommandCancel},
-						},
-					},
+				options["reply_markup"] = bot.ReplyKeyboardMarkup{
+					Keyboard:       cancelKeyboard,
+					ResizeKeyboard: true,
 				}
 			default:
-				message = fmt.Sprintf("%s: %s", txt, MessageUnknownCommand)
+				message = fmt.Sprintf("*%s*: %s", txt, MessageUnknownCommand)
 			}
 		case StatusWaitingTransmissionUpload:
 			switch {
@@ -272,14 +263,14 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 				message = MessageCanceled
 			default:
 				var torrent string
-				if webhook.Message.Document != nil {
-					fileResult := b.GetFile(webhook.Message.Document.FileId)
+				if update.Message.Document != nil {
+					fileResult := b.GetFile(update.Message.Document.FileId)
 					torrent = b.GetFileUrl(*fileResult.Result)
 				} else {
 					torrent = txt
 				}
 
-				message = helper.AddTransmissionTorrent(torrent)
+				message = transmission.AddTorrent(torrent)
 			}
 
 			// reset status
@@ -292,7 +283,7 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 			case strings.HasPrefix(txt, CommandCancel):
 				message = MessageCanceled
 			default:
-				message = helper.RemoveTransmissionTorrent(txt)
+				message = transmission.RemoveTorrent(txt)
 			}
 
 			// reset status
@@ -305,7 +296,7 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 			case strings.HasPrefix(txt, CommandCancel):
 				message = MessageCanceled
 			default:
-				message = helper.DeleteTransmissionTorrent(txt)
+				message = transmission.DeleteTorrent(txt)
 			}
 
 			// reset status
@@ -316,7 +307,7 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 		}
 
 		// send message
-		if sent := b.SendMessage(webhook.Message.Chat.Id, &message, options); sent.Ok {
+		if sent := b.SendMessage(update.Message.Chat.Id, &message, options); sent.Ok {
 			result = true
 		} else {
 			log.Printf("*** Failed to send message: %s\n", *sent.Description)
@@ -328,6 +319,26 @@ func processWebhook(b *bot.Bot, webhook bot.Update) bool {
 	}
 
 	return result
+}
+
+// get uptime of this bot in seconds
+func getUptime(launched time.Time) (uptime string) {
+	now := time.Now()
+	gap := now.Sub(launched)
+
+	uptimeSeconds := int(gap.Seconds())
+	numDays := uptimeSeconds / (60 * 60 * 24)
+	numHours := (uptimeSeconds % (60 * 60 * 24)) / (60 * 60)
+
+	return fmt.Sprintf("*%d* day(s) *%d* hour(s)", numDays, numHours)
+}
+
+// get memory usage
+func getMemoryUsage() (usage string) {
+	m := new(runtime.MemStats)
+	runtime.ReadMemStats(m)
+
+	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
 }
 
 func main() {
@@ -344,7 +355,7 @@ func main() {
 			client.StartMonitoringUpdates(0, monitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {
 					if update.Message != nil {
-						processWebhook(b, update)
+						processUpdate(b, update)
 					}
 				} else {
 					log.Printf("*** Error while receiving update (%s)\n", err.Error())

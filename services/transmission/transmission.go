@@ -1,4 +1,4 @@
-package helper
+package transmission
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 // for showing the list of transmission
-func GetTransmissionList() string {
+func GetList() string {
 	if output, err := exec.Command("transmission-remote", "-l").CombinedOutput(); err == nil {
 		return string(output)
 	} else {
@@ -15,7 +15,7 @@ func GetTransmissionList() string {
 }
 
 // for adding a torrent to the list of transmission
-func AddTransmissionTorrent(torrent string) string {
+func AddTorrent(torrent string) string {
 	if output, err := exec.Command("transmission-remote", "-a", torrent).CombinedOutput(); err == nil {
 		return "Given torrent was successfully added to the list."
 	} else {
@@ -24,7 +24,7 @@ func AddTransmissionTorrent(torrent string) string {
 }
 
 // for canceling/removing a torrent from the list of transmission
-func RemoveTransmissionTorrent(number string) string {
+func RemoveTorrent(number string) string {
 	if output, err := exec.Command("transmission-remote", "-t", number, "-r").CombinedOutput(); err == nil {
 		return "Given torrent was successfully removed from the list."
 	} else {
@@ -33,7 +33,7 @@ func RemoveTransmissionTorrent(number string) string {
 }
 
 // for removing a torrent and its local data from the list of transmission
-func DeleteTransmissionTorrent(number string) string {
+func DeleteTorrent(number string) string {
 	if output, err := exec.Command("transmission-remote", "-t", number, "--remove-and-delete").CombinedOutput(); err == nil {
 		return "Given torrent and its data were successfully deleted."
 	} else {

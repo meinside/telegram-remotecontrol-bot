@@ -5,6 +5,8 @@
 		"telegram_id_2",
 		"telegram_id_3"
 	],
+	"controllable_services": [
+	],
 	"monitor_interval": 3,
 	"is_verbose": false
 }
