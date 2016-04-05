@@ -43,28 +43,7 @@ $ ./telegrambot
 
 ## 3. Run as a service
 
-### a. init.d
-
-```bash
-$ sudo cp initd/telegrambot-service /etc/init.d/
-$ sudo vi /etc/init.d/telegrambot-service
-```
-
-and edit **BOT_DIR** value to yours.
-
-If all things are alright, you can start your service now:
-
-```bash
-$ sudo service telegrambot-service start
-```
-
-or set it up to launch on every boot automatically:
-
-```
-$ sudo update-rc.d telegrambot-service defaults
-```
-
-### b. systemd
+### a. systemd
 
 ```bash
 $ sudo cp systemd/telegrambot.service /lib/systemd/system/
