@@ -15,6 +15,7 @@ import (
 
 	bot "github.com/meinside/telegram-bot-go"
 
+	"./services"
 	"./services/transmission"
 )
 
@@ -45,21 +46,27 @@ const (
 	CommandStatus = "/status"
 	CommandCancel = "/cancel"
 
+	// commands for systemctl
+	CommandServiceStart = "/servicestart"
+	CommandServiceStop  = "/servicestop"
+
 	// commands for transmission
-	CommandTransmissionList   = "/list"
-	CommandTransmissionAdd    = "/add"
-	CommandTransmissionRemove = "/remove"
-	CommandTransmissionDelete = "/delete"
+	CommandTransmissionList   = "/trlist"
+	CommandTransmissionAdd    = "/tradd"
+	CommandTransmissionRemove = "/trremove"
+	CommandTransmissionDelete = "/trdelete"
 )
 
 const (
 	// messages
-	DefaultMessage            = "Input your command:"
-	MessageUnknownCommand     = "Unknown command."
-	MessageTransmissionUpload = "Input magnet, url, or file of target torrent:"
-	MessageTransmissionRemove = "Input the number of torrent to remove from the list:"
-	MessageTransmissionDelete = "Input the number of torrent to delete from the list and local storage:"
-	MessageCanceled           = "Canceled."
+	DefaultMessage                = "Input your command:"
+	MessageUnknownCommand         = "Unknown command."
+	MessageNoControllableServices = "No controllable services."
+	MessageControllableServices   = "Available services are:"
+	MessageTransmissionUpload     = "Input magnet, url, or file of target torrent:"
+	MessageTransmissionRemove     = "Input the number of torrent to remove from the list:"
+	MessageTransmissionDelete     = "Input the number of torrent to delete from the list and local storage:"
+	MessageCanceled               = "Canceled."
 )
 
 type Status int16
@@ -86,11 +93,13 @@ var apiToken string
 var monitorInterval int
 var isVerbose bool
 var availableIds []string
+var controllableServices []string
 var pool SessionPool
 var launched time.Time
 
 // keyboards
 var allKeyboards = [][]string{
+	[]string{CommandServiceStart, CommandServiceStop},
 	[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
 	[]string{CommandStatus, CommandHelp},
 }
@@ -117,6 +126,7 @@ func init() {
 		if err := json.Unmarshal(file, &conf); err == nil {
 			apiToken = conf.ApiToken
 			availableIds = conf.AvailableIds
+			controllableServices = conf.ControllableServices
 			monitorInterval = conf.MonitorInterval
 			if monitorInterval <= 0 {
 				monitorInterval = DefaultMonitorIntervalSeconds
@@ -152,28 +162,83 @@ func isAvailableId(id string) bool {
 	return false
 }
 
+// check if given service is controllable
+func isControllableService(service string) bool {
+	for _, v := range controllableServices {
+		if v == service {
+			return true
+		}
+	}
+	return false
+}
+
 // for showing help message
 func getHelp() string {
 	return `
 Following commands are supported:
 
+*For Systemctl*
+
+/servicestart _SERVICE_ : start a service
+/servicestop _SERVICE_ : stop a service
+
 *For Transmission*
 
-/list   : show torrent list
-/add    : add torrent with url or magnet
-/remove : remove torrent from list
-/delete : remove torrent and delete data
+/trlist : show torrent list
+/tradd : add torrent with url or magnet
+/trremove : remove torrent from list
+/trdelete : remove torrent and delete data
 
 *Others*
 
-/status   : show this bot's status
-/help     : show this help message
+/status : show this bot's status
+/help : show this help message
 `
 }
 
 // for showing current status of this bot
 func getStatus() string {
 	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", getUptime(launched), getMemoryUsage())
+}
+
+// parse service command
+func parseServiceCommand(txt string) (message string, keyboards [][]string) {
+	message = MessageNoControllableServices
+	keyboards = nil
+
+	for _, cmd := range []string{CommandServiceStart, CommandServiceStop} {
+		if strings.HasPrefix(txt, cmd) {
+			service := strings.TrimSpace(strings.Replace(txt, cmd, "", 1))
+
+			if isControllableService(service) {
+				if strings.HasPrefix(txt, CommandServiceStart) { // start service
+					if output, ok := services.Start(service); ok {
+						message = fmt.Sprintf("Started service: *%s*", service)
+					} else {
+						message = output
+					}
+				} else if strings.HasPrefix(txt, CommandServiceStop) { // stop service
+					if output, ok := services.Stop(service); ok {
+						message = fmt.Sprintf("Stopped service: *%s*", service)
+					} else {
+						message = output
+					}
+				}
+			} else {
+				message = MessageControllableServices
+
+				keys := []string{}
+				for _, v := range controllableServices {
+					keys = append(keys, fmt.Sprintf("%s %s", cmd, v))
+				}
+
+				keyboards = [][]string{keys}
+			}
+		}
+		continue
+	}
+
+	return message, keyboards
 }
 
 // for processing incoming update from Telegram
@@ -216,12 +281,25 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		switch session.CurrentStatus {
 		case StatusWaiting:
 			switch {
+			// start
 			case strings.HasPrefix(txt, CommandStart):
 				message = DefaultMessage
-			case strings.HasPrefix(txt, CommandHelp):
-				message = getHelp()
-			case strings.HasPrefix(txt, CommandStatus):
-				message = getStatus()
+			// systemctl
+			case strings.HasPrefix(txt, CommandServiceStart) || strings.HasPrefix(txt, CommandServiceStop):
+				if len(controllableServices) > 0 {
+					var keyboards [][]string
+					message, keyboards = parseServiceCommand(txt)
+
+					if keyboards != nil {
+						options["reply_markup"] = bot.ReplyKeyboardMarkup{
+							Keyboard:       keyboards,
+							ResizeKeyboard: true,
+						}
+					}
+				} else {
+					message = MessageNoControllableServices
+				}
+			// transmission
 			case strings.HasPrefix(txt, CommandTransmissionList):
 				message = transmission.GetList()
 			case strings.HasPrefix(txt, CommandTransmissionAdd):
@@ -254,6 +332,11 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					Keyboard:       cancelKeyboard,
 					ResizeKeyboard: true,
 				}
+			case strings.HasPrefix(txt, CommandStatus):
+				message = getStatus()
+			case strings.HasPrefix(txt, CommandHelp):
+				message = getHelp()
+			// fallback
 			default:
 				message = fmt.Sprintf("*%s*: %s", txt, MessageUnknownCommand)
 			}
