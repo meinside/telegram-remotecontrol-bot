@@ -109,8 +109,8 @@ var launched time.Time
 
 // keyboards
 var allKeyboards = [][]string{
-	[]string{CommandServiceStart, CommandServiceStop},
 	[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
+	[]string{CommandServiceStart, CommandServiceStop},
 	[]string{CommandStatus, CommandHelp},
 }
 var cancelKeyboard = [][]string{
