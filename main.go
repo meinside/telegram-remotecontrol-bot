@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -15,59 +14,14 @@ import (
 	bot "github.com/meinside/telegram-bot-go"
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
+	"github.com/meinside/telegram-bot-remotecontrol/helper"
 	"github.com/meinside/telegram-bot-remotecontrol/services"
 	"github.com/meinside/telegram-bot-remotecontrol/services/transmission"
 )
 
 const (
-	ConfigFilename = "config.json"
-
 	//DoProfiling = true
 	DoProfiling = false
-)
-
-// struct for config file
-type Config struct {
-	ApiToken             string   `json:"api_token"`
-	AvailableIds         []string `json:"available_ids"`
-	ControllableServices []string `json:"controllable_services"`
-	MonitorInterval      int      `json:"monitor_interval"`
-	CliPort              int      `json:"cli_port"`
-	IsVerbose            bool     `json:"is_verbose"`
-}
-
-const (
-	DefaultMonitorIntervalSeconds = 3
-)
-
-const (
-	// commands
-	CommandStart  = "/start"
-	CommandHelp   = "/help"
-	CommandStatus = "/status"
-	CommandCancel = "/cancel"
-
-	// commands for systemctl
-	CommandServiceStart = "/servicestart"
-	CommandServiceStop  = "/servicestop"
-
-	// commands for transmission
-	CommandTransmissionList   = "/trlist"
-	CommandTransmissionAdd    = "/tradd"
-	CommandTransmissionRemove = "/trremove"
-	CommandTransmissionDelete = "/trdelete"
-)
-
-const (
-	// messages
-	DefaultMessage                = "Input your command:"
-	MessageUnknownCommand         = "Unknown command."
-	MessageNoControllableServices = "No controllable services."
-	MessageControllableServices   = "Available services are:"
-	MessageTransmissionUpload     = "Input magnet, url, or file of target torrent:"
-	MessageTransmissionRemove     = "Input the number of torrent to remove from the list:"
-	MessageTransmissionDelete     = "Input the number of torrent to delete from the list and local storage:"
-	MessageCanceled               = "Canceled."
 )
 
 type Status int16
@@ -109,12 +63,12 @@ var launched time.Time
 
 // keyboards
 var allKeyboards = [][]string{
-	[]string{CommandTransmissionList, CommandTransmissionAdd, CommandTransmissionRemove, CommandTransmissionDelete},
-	[]string{CommandServiceStart, CommandServiceStop},
-	[]string{CommandStatus, CommandHelp},
+	[]string{conf.CommandTransmissionList, conf.CommandTransmissionAdd, conf.CommandTransmissionRemove, conf.CommandTransmissionDelete},
+	[]string{conf.CommandServiceStart, conf.CommandServiceStop},
+	[]string{conf.CommandStatus, conf.CommandHelp},
 }
 var cancelKeyboard = [][]string{
-	[]string{CommandCancel},
+	[]string{conf.CommandCancel},
 }
 
 // initialization
@@ -131,13 +85,13 @@ func init() {
 	}
 
 	// read variables from config file
-	if config, err := conf.GetConfig(); err == nil {
+	if config, err := helper.GetConfig(); err == nil {
 		apiToken = config.ApiToken
 		availableIds = config.AvailableIds
 		controllableServices = config.ControllableServices
 		monitorInterval = config.MonitorInterval
 		if monitorInterval <= 0 {
-			monitorInterval = DefaultMonitorIntervalSeconds
+			monitorInterval = conf.DefaultMonitorIntervalSeconds
 		}
 		isVerbose = config.IsVerbose
 
@@ -207,26 +161,26 @@ Following commands are supported:
 
 // for showing current status of this bot
 func getStatus() string {
-	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", getUptime(launched), getMemoryUsage())
+	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", helper.GetUptime(launched), helper.GetMemoryUsage())
 }
 
 // parse service command
 func parseServiceCommand(txt string) (message string, keyboards [][]string) {
-	message = MessageNoControllableServices
+	message = conf.MessageNoControllableServices
 	keyboards = nil
 
-	for _, cmd := range []string{CommandServiceStart, CommandServiceStop} {
+	for _, cmd := range []string{conf.CommandServiceStart, conf.CommandServiceStop} {
 		if strings.HasPrefix(txt, cmd) {
 			service := strings.TrimSpace(strings.Replace(txt, cmd, "", 1))
 
 			if isControllableService(service) {
-				if strings.HasPrefix(txt, CommandServiceStart) { // start service
+				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
 					if output, ok := services.Start(service); ok {
 						message = fmt.Sprintf("Started service: *%s*", service)
 					} else {
 						message = output
 					}
-				} else if strings.HasPrefix(txt, CommandServiceStop) { // stop service
+				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
 					if output, ok := services.Stop(service); ok {
 						message = fmt.Sprintf("Stopped service: *%s*", service)
 					} else {
@@ -234,7 +188,7 @@ func parseServiceCommand(txt string) (message string, keyboards [][]string) {
 					}
 				}
 			} else {
-				message = MessageControllableServices
+				message = conf.MessageControllableServices
 
 				keys := []string{}
 				for _, v := range controllableServices {
@@ -243,7 +197,7 @@ func parseServiceCommand(txt string) (message string, keyboards [][]string) {
 
 				keyboards = [][]string{
 					keys,
-					[]string{CommandCancel},
+					[]string{conf.CommandCancel},
 				}
 			}
 		}
@@ -298,10 +252,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		case StatusWaiting:
 			switch {
 			// start
-			case strings.HasPrefix(txt, CommandStart):
-				message = DefaultMessage
+			case strings.HasPrefix(txt, conf.CommandStart):
+				message = conf.MessageDefault
 			// systemctl
-			case strings.HasPrefix(txt, CommandServiceStart) || strings.HasPrefix(txt, CommandServiceStop):
+			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
 				if len(controllableServices) > 0 {
 					pool.Sessions[userId] = Session{
 						UserId:        userId,
@@ -318,13 +272,13 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 						}
 					}
 				} else {
-					message = MessageNoControllableServices
+					message = conf.MessageNoControllableServices
 				}
 			// transmission
-			case strings.HasPrefix(txt, CommandTransmissionList):
+			case strings.HasPrefix(txt, conf.CommandTransmissionList):
 				message = transmission.GetList()
-			case strings.HasPrefix(txt, CommandTransmissionAdd):
-				message = MessageTransmissionUpload
+			case strings.HasPrefix(txt, conf.CommandTransmissionAdd):
+				message = conf.MessageTransmissionUpload
 				pool.Sessions[userId] = Session{
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionUpload,
@@ -333,8 +287,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					Keyboard:       cancelKeyboard,
 					ResizeKeyboard: true,
 				}
-			case strings.HasPrefix(txt, CommandTransmissionRemove):
-				message = MessageTransmissionRemove
+			case strings.HasPrefix(txt, conf.CommandTransmissionRemove):
+				message = conf.MessageTransmissionRemove
 				pool.Sessions[userId] = Session{
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionRemove,
@@ -343,8 +297,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					Keyboard:       cancelKeyboard,
 					ResizeKeyboard: true,
 				}
-			case strings.HasPrefix(txt, CommandTransmissionDelete):
-				message = MessageTransmissionDelete
+			case strings.HasPrefix(txt, conf.CommandTransmissionDelete):
+				message = conf.MessageTransmissionDelete
 				pool.Sessions[userId] = Session{
 					UserId:        userId,
 					CurrentStatus: StatusWaitingTransmissionDelete,
@@ -353,18 +307,18 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					Keyboard:       cancelKeyboard,
 					ResizeKeyboard: true,
 				}
-			case strings.HasPrefix(txt, CommandStatus):
+			case strings.HasPrefix(txt, conf.CommandStatus):
 				message = getStatus()
-			case strings.HasPrefix(txt, CommandHelp):
+			case strings.HasPrefix(txt, conf.CommandHelp):
 				message = getHelp()
 			// fallback
 			default:
-				message = fmt.Sprintf("*%s*: %s", txt, MessageUnknownCommand)
+				message = fmt.Sprintf("*%s*: %s", txt, conf.MessageUnknownCommand)
 			}
 		case StatusWaitingServiceName:
 			switch {
 			// systemctl
-			case strings.HasPrefix(txt, CommandServiceStart) || strings.HasPrefix(txt, CommandServiceStop):
+			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
 				if len(controllableServices) > 0 {
 					pool.Sessions[userId] = Session{
 						UserId:        userId,
@@ -381,11 +335,11 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 						}
 					}
 				} else {
-					message = MessageNoControllableServices
+					message = conf.MessageNoControllableServices
 				}
 			// cancel
 			default:
-				message = MessageCanceled
+				message = conf.MessageCanceled
 			}
 
 			// reset status
@@ -395,8 +349,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 		case StatusWaitingTransmissionUpload:
 			switch {
-			case strings.HasPrefix(txt, CommandCancel):
-				message = MessageCanceled
+			case strings.HasPrefix(txt, conf.CommandCancel):
+				message = conf.MessageCanceled
 			default:
 				var torrent string
 				if update.Message.Document != nil {
@@ -416,8 +370,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 		case StatusWaitingTransmissionRemove:
 			switch {
-			case strings.HasPrefix(txt, CommandCancel):
-				message = MessageCanceled
+			case strings.HasPrefix(txt, conf.CommandCancel):
+				message = conf.MessageCanceled
 			default:
 				message = transmission.RemoveTorrent(txt)
 			}
@@ -429,8 +383,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 		case StatusWaitingTransmissionDelete:
 			switch {
-			case strings.HasPrefix(txt, CommandCancel):
-				message = MessageCanceled
+			case strings.HasPrefix(txt, conf.CommandCancel):
+				message = conf.MessageCanceled
 			default:
 				message = transmission.DeleteTorrent(txt)
 			}
@@ -454,26 +408,6 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	pool.Unlock()
 
 	return result
-}
-
-// get uptime of this bot in seconds
-func getUptime(launched time.Time) (uptime string) {
-	now := time.Now()
-	gap := now.Sub(launched)
-
-	uptimeSeconds := int(gap.Seconds())
-	numDays := uptimeSeconds / (60 * 60 * 24)
-	numHours := (uptimeSeconds % (60 * 60 * 24)) / (60 * 60)
-
-	return fmt.Sprintf("*%d* day(s) *%d* hour(s)", numDays, numHours)
-}
-
-// get memory usage
-func getMemoryUsage() (usage string) {
-	m := new(runtime.MemStats)
-	runtime.ReadMemStats(m)
-
-	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
 }
 
 // for processing incoming request through HTTP

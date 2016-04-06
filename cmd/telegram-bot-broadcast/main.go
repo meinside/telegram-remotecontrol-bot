@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
+	"github.com/meinside/telegram-bot-remotecontrol/helper"
 )
 
 func printUsage() {
@@ -22,7 +23,7 @@ func main() {
 
 	if len(args) > 0 {
 		// read variables from config file
-		if config, err := conf.GetConfig(); err == nil {
+		if config, err := helper.GetConfig(); err == nil {
 			cliPort := config.CliPort
 			if cliPort <= 0 {
 				cliPort = conf.DefaultCliPortNumber
