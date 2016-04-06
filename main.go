@@ -90,6 +90,11 @@ type SessionPool struct {
 	sync.Mutex
 }
 
+type KnownChatIds struct {
+	ChatIds map[string]int
+	sync.RWMutex
+}
+
 // variables
 var apiToken string
 var monitorInterval int
@@ -97,6 +102,7 @@ var isVerbose bool
 var availableIds []string
 var controllableServices []string
 var pool SessionPool
+var chatIds KnownChatIds
 var queue chan string
 var cliPort int
 var launched time.Time
@@ -145,6 +151,9 @@ func init() {
 		}
 		pool = SessionPool{
 			Sessions: sessions,
+		}
+		chatIds = KnownChatIds{
+			ChatIds: make(map[string]int),
 		}
 		queue = make(chan string, conf.QueueSize)
 	} else {
@@ -258,11 +267,15 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		return false
 	}
 
+	// save chat id
+	chatIds.Lock()
+	chatIds.ChatIds[userId] = update.Message.Chat.Id
+	chatIds.Unlock()
+
 	// process result
 	result := false
 
 	pool.Lock()
-
 	if session, exists := pool.Sessions[userId]; exists {
 		// text from message
 		var txt string
@@ -438,7 +451,6 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	} else {
 		log.Printf("*** Session does not exist for id: %s\n", userId)
 	}
-
 	pool.Unlock()
 
 	return result
@@ -491,9 +503,15 @@ func main() {
 			go func() {
 				for {
 					select {
-					case s := <-queue:
-						// TODO - broadcast to all connected chat ids
-						log.Printf("received message from queue: %s\n", s)
+					case message := <-queue:
+						// broadcast to all connected chat ids
+						chatIds.RLock()
+						for _, chatId := range chatIds.ChatIds {
+							if sent := client.SendMessage(chatId, &message, map[string]interface{}{}); !sent.Ok {
+								log.Printf("*** Failed to broadcast to chat id %d: %s\n", chatId, *sent.Description)
+							}
+						}
+						chatIds.RUnlock()
 					}
 				}
 			}()
