@@ -2,10 +2,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"net/http"
 	"runtime"
 	"strings"
 	"sync"
@@ -15,8 +14,9 @@ import (
 
 	bot "github.com/meinside/telegram-bot-go"
 
-	"./services"
-	"./services/transmission"
+	"github.com/meinside/telegram-bot-remotecontrol/conf"
+	"github.com/meinside/telegram-bot-remotecontrol/services"
+	"github.com/meinside/telegram-bot-remotecontrol/services/transmission"
 )
 
 const (
@@ -32,6 +32,7 @@ type Config struct {
 	AvailableIds         []string `json:"available_ids"`
 	ControllableServices []string `json:"controllable_services"`
 	MonitorInterval      int      `json:"monitor_interval"`
+	CliPort              int      `json:"cli_port"`
 	IsVerbose            bool     `json:"is_verbose"`
 }
 
@@ -73,6 +74,7 @@ type Status int16
 
 const (
 	StatusWaiting                   Status = iota
+	StatusWaitingServiceName        Status = iota
 	StatusWaitingTransmissionUpload Status = iota
 	StatusWaitingTransmissionRemove Status = iota
 	StatusWaitingTransmissionDelete Status = iota
@@ -95,6 +97,8 @@ var isVerbose bool
 var availableIds []string
 var controllableServices []string
 var pool SessionPool
+var queue chan string
+var cliPort int
 var launched time.Time
 
 // keyboards
@@ -121,32 +125,28 @@ func init() {
 	}
 
 	// read variables from config file
-	if file, err := ioutil.ReadFile(ConfigFilename); err == nil {
-		var conf Config
-		if err := json.Unmarshal(file, &conf); err == nil {
-			apiToken = conf.ApiToken
-			availableIds = conf.AvailableIds
-			controllableServices = conf.ControllableServices
-			monitorInterval = conf.MonitorInterval
-			if monitorInterval <= 0 {
-				monitorInterval = DefaultMonitorIntervalSeconds
-			}
-			isVerbose = conf.IsVerbose
-
-			// initialize variables
-			sessions := make(map[string]Session)
-			for _, v := range availableIds {
-				sessions[v] = Session{
-					UserId:        v,
-					CurrentStatus: StatusWaiting,
-				}
-			}
-			pool = SessionPool{
-				Sessions: sessions,
-			}
-		} else {
-			panic(err.Error())
+	if config, err := conf.GetConfig(); err == nil {
+		apiToken = config.ApiToken
+		availableIds = config.AvailableIds
+		controllableServices = config.ControllableServices
+		monitorInterval = config.MonitorInterval
+		if monitorInterval <= 0 {
+			monitorInterval = DefaultMonitorIntervalSeconds
 		}
+		isVerbose = config.IsVerbose
+
+		// initialize variables
+		sessions := make(map[string]Session)
+		for _, v := range availableIds {
+			sessions[v] = Session{
+				UserId:        v,
+				CurrentStatus: StatusWaiting,
+			}
+		}
+		pool = SessionPool{
+			Sessions: sessions,
+		}
+		queue = make(chan string, conf.QueueSize)
 	} else {
 		panic(err.Error())
 	}
@@ -232,7 +232,10 @@ func parseServiceCommand(txt string) (message string, keyboards [][]string) {
 					keys = append(keys, fmt.Sprintf("%s %s", cmd, v))
 				}
 
-				keyboards = [][]string{keys}
+				keyboards = [][]string{
+					keys,
+					[]string{CommandCancel},
+				}
 			}
 		}
 		continue
@@ -241,7 +244,7 @@ func parseServiceCommand(txt string) (message string, keyboards [][]string) {
 	return message, keyboards
 }
 
-// for processing incoming update from Telegram
+// process incoming update from Telegram
 func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
@@ -258,9 +261,9 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// process result
 	result := false
 
-	if session, exists := pool.Sessions[userId]; exists {
-		pool.Lock()
+	pool.Lock()
 
+	if session, exists := pool.Sessions[userId]; exists {
 		// text from message
 		var txt string
 		if update.Message.HasText() {
@@ -287,6 +290,11 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			// systemctl
 			case strings.HasPrefix(txt, CommandServiceStart) || strings.HasPrefix(txt, CommandServiceStop):
 				if len(controllableServices) > 0 {
+					pool.Sessions[userId] = Session{
+						UserId:        userId,
+						CurrentStatus: StatusWaitingServiceName,
+					}
+
 					var keyboards [][]string
 					message, keyboards = parseServiceCommand(txt)
 
@@ -339,6 +347,38 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			// fallback
 			default:
 				message = fmt.Sprintf("*%s*: %s", txt, MessageUnknownCommand)
+			}
+		case StatusWaitingServiceName:
+			switch {
+			// systemctl
+			case strings.HasPrefix(txt, CommandServiceStart) || strings.HasPrefix(txt, CommandServiceStop):
+				if len(controllableServices) > 0 {
+					pool.Sessions[userId] = Session{
+						UserId:        userId,
+						CurrentStatus: StatusWaiting,
+					}
+
+					var keyboards [][]string
+					message, keyboards = parseServiceCommand(txt)
+
+					if keyboards != nil {
+						options["reply_markup"] = bot.ReplyKeyboardMarkup{
+							Keyboard:       keyboards,
+							ResizeKeyboard: true,
+						}
+					}
+				} else {
+					message = MessageNoControllableServices
+				}
+			// cancel
+			default:
+				message = MessageCanceled
+			}
+
+			// reset status
+			pool.Sessions[userId] = Session{
+				UserId:        userId,
+				CurrentStatus: StatusWaiting,
 			}
 		case StatusWaitingTransmissionUpload:
 			switch {
@@ -395,11 +435,11 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		} else {
 			log.Printf("*** Failed to send message: %s\n", *sent.Description)
 		}
-
-		pool.Unlock()
 	} else {
 		log.Printf("*** Session does not exist for id: %s\n", userId)
 	}
+
+	pool.Unlock()
 
 	return result
 }
@@ -424,6 +464,19 @@ func getMemoryUsage() (usage string) {
 	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
 }
 
+// for processing incoming request through HTTP
+var httpHandler = func(w http.ResponseWriter, r *http.Request) {
+	message := strings.TrimSpace(r.FormValue(conf.ParamMessage))
+
+	if len(message) > 0 {
+		if isVerbose {
+			log.Printf("Received message from CLI: %s\n", message)
+		}
+
+		queue <- message
+	}
+}
+
 func main() {
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
@@ -434,6 +487,30 @@ func main() {
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
+			// wait for CLI message channel
+			go func() {
+				for {
+					select {
+					case s := <-queue:
+						// TODO - broadcast to all connected chat ids
+						log.Printf("received message from queue: %s\n", s)
+					}
+				}
+			}()
+
+			// start web server for CLI
+			go func() {
+				if cliPort <= 0 {
+					cliPort = conf.DefaultCliPortNumber
+				}
+				log.Printf("Starting local web server for CLI on port: %d\n", cliPort)
+
+				http.HandleFunc(conf.HttpBroadcastPath, httpHandler)
+				if err := http.ListenAndServe(fmt.Sprintf(":%d", cliPort), nil); err != nil {
+					panic(err.Error())
+				}
+			}()
+
 			// wait for new updates
 			client.StartMonitoringUpdates(0, monitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {

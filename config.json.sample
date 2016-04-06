@@ -8,5 +8,6 @@
 	"controllable_services": [
 	],
 	"monitor_interval": 3,
+	"cli_port": 59992,
 	"is_verbose": false
 }
