@@ -15,8 +15,8 @@ import (
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
 	"github.com/meinside/telegram-bot-remotecontrol/helper"
-	"github.com/meinside/telegram-bot-remotecontrol/services"
-	"github.com/meinside/telegram-bot-remotecontrol/services/transmission"
+	"github.com/meinside/telegram-bot-remotecontrol/helper/services"
+	"github.com/meinside/telegram-bot-remotecontrol/helper/services/transmission"
 )
 
 const (
