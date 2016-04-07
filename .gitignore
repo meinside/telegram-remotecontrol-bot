@@ -1,5 +1,6 @@
 *.swp
 telegrambot
+db.sqlite*
 
 config.json
 cert/*

@@ -12,8 +12,9 @@ const (
 
 	// commands
 	CommandStart  = "/start"
-	CommandHelp   = "/help"
 	CommandStatus = "/status"
+	CommandLogs   = "/logs"
+	CommandHelp   = "/help"
 	CommandCancel = "/cancel"
 
 	// commands for systemctl
@@ -30,9 +31,13 @@ const (
 	MessageDefault                = "Input your command:"
 	MessageUnknownCommand         = "Unknown command."
 	MessageNoControllableServices = "No controllable services."
+	MessageNoLogs                 = "No saved logs."
 	MessageControllableServices   = "Available services are:"
 	MessageTransmissionUpload     = "Input magnet, url, or file of target torrent:"
 	MessageTransmissionRemove     = "Input the number of torrent to remove from the list:"
 	MessageTransmissionDelete     = "Input the number of torrent to delete from the list and local storage:"
 	MessageCanceled               = "Canceled."
+
+	//
+	NumRecentLogs = 20
 )

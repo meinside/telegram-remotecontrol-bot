@@ -60,12 +60,13 @@ var chatIds KnownChatIds
 var queue chan string
 var cliPort int
 var launched time.Time
+var db *helper.Database
 
 // keyboards
 var allKeyboards = [][]string{
 	[]string{conf.CommandTransmissionList, conf.CommandTransmissionAdd, conf.CommandTransmissionRemove, conf.CommandTransmissionDelete},
 	[]string{conf.CommandServiceStart, conf.CommandServiceStop},
-	[]string{conf.CommandStatus, conf.CommandHelp},
+	[]string{conf.CommandStatus, conf.CommandLogs, conf.CommandHelp},
 }
 var cancelKeyboard = [][]string{
 	[]string{conf.CommandCancel},
@@ -110,8 +111,11 @@ func init() {
 			ChatIds: make(map[string]int),
 		}
 		queue = make(chan string, conf.QueueSize)
+
+		// open database
+		db = helper.OpenDb()
 	} else {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
@@ -157,6 +161,22 @@ Following commands are supported:
 /status : show this bot's status
 /help : show this help message
 `
+}
+
+// get recent logs
+func getLogs() string {
+	var lines []string
+
+	logs := db.GetLogs(conf.NumRecentLogs)
+
+	if len(logs) <= 0 {
+		return conf.MessageNoLogs
+	} else {
+		for _, log := range logs {
+			lines = append(lines, fmt.Sprintf("%s (%s) %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
+		}
+		return strings.Join(lines, "\n")
+	}
 }
 
 // for showing current status of this bot
@@ -218,6 +238,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	userId = *update.Message.From.Username
 	if !isAvailableId(userId) {
 		log.Printf("*** Id not allowed: %s\n", userId)
+
+		// log error to db
+		db.LogError(fmt.Sprintf("not allowed id: %s", userId))
+
 		return false
 	}
 
@@ -309,6 +333,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 			case strings.HasPrefix(txt, conf.CommandStatus):
 				message = getStatus()
+			case strings.HasPrefix(txt, conf.CommandLogs):
+				message = getLogs()
 			case strings.HasPrefix(txt, conf.CommandHelp):
 				message = getHelp()
 			// fallback
@@ -401,9 +427,15 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			result = true
 		} else {
 			log.Printf("*** Failed to send message: %s\n", *sent.Description)
+
+			// log error to db
+			db.LogError(*sent.Description)
 		}
 	} else {
 		log.Printf("*** Session does not exist for id: %s\n", userId)
+
+		// log error to db
+		db.LogError(fmt.Sprintf("no session for id: %s", userId))
 	}
 	pool.Unlock()
 
@@ -424,6 +456,8 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	db.Log("Starting server...")
+
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
 
@@ -443,6 +477,9 @@ func main() {
 						for _, chatId := range chatIds.ChatIds {
 							if sent := client.SendMessage(chatId, &message, map[string]interface{}{}); !sent.Ok {
 								log.Printf("*** Failed to broadcast to chat id %d: %s\n", chatId, *sent.Description)
+
+								// log error to db
+								db.LogError(*sent.Description)
 							}
 						}
 						chatIds.RUnlock()
@@ -459,7 +496,7 @@ func main() {
 
 				http.HandleFunc(conf.HttpBroadcastPath, httpHandler)
 				if err := http.ListenAndServe(fmt.Sprintf(":%d", cliPort), nil); err != nil {
-					panic(err.Error())
+					panic(err)
 				}
 			}()
 
@@ -470,7 +507,7 @@ func main() {
 						processUpdate(b, update)
 					}
 				} else {
-					log.Printf("*** Error while receiving update (%s)\n", err.Error())
+					log.Printf("*** Error while receiving update (%s)\n", err)
 				}
 			})
 		} else {
