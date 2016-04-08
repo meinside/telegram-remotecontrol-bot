@@ -28,6 +28,12 @@ type Log struct {
 	Time    time.Time
 }
 
+type Chat struct {
+	ChatId int
+	UserId string
+	Time   time.Time
+}
+
 var _db *Database = nil
 
 func OpenDb() *Database {
@@ -41,6 +47,7 @@ func OpenDb() *Database {
 				db: db,
 			}
 
+			// logs table
 			if _, err := db.Exec(`create table if not exists logs(
 				id integer primary key autoincrement,
 				type text default null,
@@ -48,6 +55,17 @@ func OpenDb() *Database {
 				time datetime default current_timestamp
 			)`); err != nil {
 				panic("Failed to create logs table: " + err.Error())
+			}
+
+			// chats table
+			if _, err := db.Exec(`create table if not exists chats(
+				id integer primary key autoincrement,
+				chat_id integer not null,
+				user_id text not null,
+				create_time datetime default current_timestamp,
+				unique(chat_id)
+			)`); err != nil {
+				panic("Failed to create chats table: " + err.Error())
 			}
 		}
 	}
@@ -70,7 +88,7 @@ func (d *Database) saveLog(typ, msg string) {
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(typ, msg); err != nil {
-			log.Printf("*** Failed to save log to local database: %s\n", err.Error())
+			log.Printf("*** Failed to save log into local database: %s\n", err.Error())
 		}
 	}
 
@@ -118,4 +136,70 @@ func (d *Database) GetLogs(latestN int) []Log {
 	d.RUnlock()
 
 	return logs
+}
+
+func (d *Database) SaveChat(chatId int, userId string) {
+	d.Lock()
+
+	if stmt, err := d.db.Prepare(`insert or ignore into chats(chat_id, user_id) values(?, ?)`); err != nil {
+		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+	} else {
+		defer stmt.Close()
+		if _, err = stmt.Exec(chatId, userId); err != nil {
+			log.Printf("*** Failed to save chat into local database: %s\n", err.Error())
+		}
+	}
+
+	d.Unlock()
+}
+
+func (d *Database) DeleteChat(chatId int) {
+	d.Lock()
+
+	if stmt, err := d.db.Prepare(`delete from chats where chat_id = ?`); err != nil {
+		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+	} else {
+		defer stmt.Close()
+		if _, err = stmt.Exec(chatId); err != nil {
+			log.Printf("*** Failed to delete chat from local database: %s\n", err.Error())
+		}
+	}
+
+	d.Unlock()
+}
+
+func (d *Database) GetChats() []Chat {
+	chats := []Chat{}
+
+	d.RLock()
+
+	if stmt, err := d.db.Prepare(`select chat_id, user_id, datetime(create_time, 'localtime') as time from chats`); err != nil {
+		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+	} else {
+		defer stmt.Close()
+
+		if rows, err := stmt.Query(); err != nil {
+			log.Printf("*** Failed to select chats from local database: %s\n", err.Error())
+		} else {
+			defer rows.Close()
+
+			var chatId int
+			var userId, datetime string
+			var tm time.Time
+			for rows.Next() {
+				rows.Scan(&chatId, &userId, &datetime)
+				tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
+
+				chats = append(chats, Chat{
+					ChatId: chatId,
+					UserId: userId,
+					Time:   tm,
+				})
+			}
+		}
+	}
+
+	d.RUnlock()
+
+	return chats
 }

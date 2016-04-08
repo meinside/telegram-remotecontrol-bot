@@ -44,11 +44,6 @@ type SessionPool struct {
 	sync.Mutex
 }
 
-type KnownChatIds struct {
-	ChatIds map[string]int
-	sync.RWMutex
-}
-
 // variables
 var apiToken string
 var monitorInterval int
@@ -56,7 +51,6 @@ var isVerbose bool
 var availableIds []string
 var controllableServices []string
 var pool SessionPool
-var chatIds KnownChatIds
 var queue chan string
 var cliPort int
 var launched time.Time
@@ -106,9 +100,6 @@ func init() {
 		}
 		pool = SessionPool{
 			Sessions: sessions,
-		}
-		chatIds = KnownChatIds{
-			ChatIds: make(map[string]int),
 		}
 		queue = make(chan string, conf.QueueSize)
 
@@ -246,9 +237,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	}
 
 	// save chat id
-	chatIds.Lock()
-	chatIds.ChatIds[userId] = update.Message.Chat.Id
-	chatIds.Unlock()
+	db.SaveChat(update.Message.Chat.Id, userId)
 
 	// process result
 	result := false
@@ -456,7 +445,7 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	db.Log("Starting server...")
+	db.Log("starting server...")
 
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
@@ -473,16 +462,21 @@ func main() {
 					select {
 					case message := <-queue:
 						// broadcast to all connected chat ids
-						chatIds.RLock()
-						for _, chatId := range chatIds.ChatIds {
-							if sent := client.SendMessage(chatId, &message, map[string]interface{}{}); !sent.Ok {
-								log.Printf("*** Failed to broadcast to chat id %d: %s\n", chatId, *sent.Description)
+						for _, chat := range db.GetChats() {
+							if isAvailableId(chat.UserId) {
+								if sent := client.SendMessage(chat.ChatId, &message, map[string]interface{}{}); !sent.Ok {
+									log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
+
+									// log error to db
+									db.LogError(*sent.Description)
+								}
+							} else {
+								log.Printf("*** Id not allowed for broadcasting: %s\n", chat.UserId)
 
 								// log error to db
-								db.LogError(*sent.Description)
+								db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
 							}
 						}
-						chatIds.RUnlock()
 					}
 				}
 			}()
