@@ -85,7 +85,7 @@ and type
 $ $GOPATH/bin/telegram-bot-broadcast "SOME_MESSAGE_TO_BROADCAST"
 ```
 
-then all connected clients who sent at least one message after the boot up of the daemon will receive this message.
+then all connected clients who sent at least one message will receive this message.
 
 ## 998. Trouble shooting
 
