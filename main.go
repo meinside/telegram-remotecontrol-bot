@@ -432,6 +432,25 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	return result
 }
 
+// broadcast a messge to given chats
+func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
+	for _, chat := range chats {
+		if isAvailableId(chat.UserId) {
+			if sent := client.SendMessage(chat.ChatId, &message, map[string]interface{}{}); !sent.Ok {
+				log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
+
+				// log error to db
+				db.LogError(*sent.Description)
+			}
+		} else {
+			log.Printf("*** Id not allowed for broadcasting: %s\n", chat.UserId)
+
+			// log error to db
+			db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
+		}
+	}
+}
+
 // for processing incoming request through HTTP
 var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 	message := strings.TrimSpace(r.FormValue(conf.ParamMessage))
@@ -462,22 +481,8 @@ func main() {
 				for {
 					select {
 					case message := <-queue:
-						// broadcast to all connected chat ids
-						for _, chat := range db.GetChats() {
-							if isAvailableId(chat.UserId) {
-								if sent := client.SendMessage(chat.ChatId, &message, map[string]interface{}{}); !sent.Ok {
-									log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
-
-									// log error to db
-									db.LogError(*sent.Description)
-								}
-							} else {
-								log.Printf("*** Id not allowed for broadcasting: %s\n", chat.UserId)
-
-								// log error to db
-								db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
-							}
-						}
+						// broadcast message from CLI
+						broadcast(client, db.GetChats(), message)
 					}
 				}
 			}()
