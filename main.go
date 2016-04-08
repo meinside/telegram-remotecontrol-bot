@@ -144,17 +144,17 @@ func getHelp() string {
 	return `
 Following commands are supported:
 
-*For Systemctl*
-
-/servicestart _SERVICE_ : start a service
-/servicestop _SERVICE_ : stop a service
-
 *For Transmission*
 
 /trlist : show torrent list
 /tradd : add torrent with url or magnet
 /trremove : remove torrent from list
 /trdelete : remove torrent and delete data
+
+*For Systemctl*
+
+/servicestart _SERVICE_ : start a service
+/servicestop _SERVICE_ : stop a service
 
 *Others*
 
@@ -173,7 +173,7 @@ func getLogs() string {
 		return conf.MessageNoLogs
 	} else {
 		for _, log := range logs {
-			lines = append(lines, fmt.Sprintf("%s (%s) %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
+			lines = append(lines, fmt.Sprintf("%s %s: %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
 		}
 		return strings.Join(lines, "\n")
 	}
