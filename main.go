@@ -150,6 +150,7 @@ Following commands are supported:
 *Others*
 
 /status : show this bot's status
+/logs : show latest logs of this bot
 /help : show this help message
 `
 }
