@@ -11,6 +11,7 @@ Install Go and generate your Telegram bot's API token.
 ## 1. Install
 
 ```bash
+$ go get -u github.com/mattn/go-sqlite3
 $ go get -u github.com/meinside/telegram-bot-remotecontrol
 $ cd $GOPOATH/src/github.com/meinside/telegram-bot-remotecontrol
 $ cp config.json.sample config.json
