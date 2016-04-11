@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# fail2ban-broadcast.sh
+#
+# created by : meinside@gmail.com
+# last update: 2016.04.11.
+#
+# for broadcasting a message on fail2ban's ban action
+# through telegram-bot-remotecontrol
+# (github.com/meinside/telegram-bot-remotecontrol)
+#
+# Usage:
+#
+# 0. install essential packages:
+#
+# $ sudo apt-get install curl jq
+#
+# 1. setup and run telegram-bot-remotecontrol:
+#
+# https://github.com/meinside/telegram-bot-remotecontrol
+#
+# 2. install telegram-bot-broadcast:
+#
+# $ go get -u github.com/meinside/telegram-bot-remotecontrol/cmd/telegram-bot-broadcast
+#
+# 3. duplicate fail2ban's banaction:
+#
+# $ cd /etc/fail2ban/action.d
+# $ sudo cp iptables-multiport.conf iptables-multiport-letmeknow.conf
+#
+# 4. append a line at the end of actionban which will execute this bash script:
+#
+# $ sudo vi iptables-multiport-letmeknow.conf
+#
+# (example)
+# actionban = iptables -I fail2ban-<name> 1 -s <ip> -j DROP
+#            /path/to/this/fail2ban-broadcast.sh "<name>" "<ip>"
+#
+# 5. change banaction to your newly created one in jail.local:
+#
+# $ sudo vi /etc/fail2ban/jail.local
+#
+# ACTIONS
+# #banaction = iptables-multiport
+# banaction = iptables-multiport-letmeknow
+#
+# 6. restart fail2ban service:
+#
+# $ sudo systemctl restart fail2ban.service
+
+BROADCAST_BIN="/path/to/bin/telegram-bot-broadcast"	# XXX - edit this path
+
+if [ $# -ge 2 ]; then
+	PROTOCOL=$1
+	IP=$2
+	LOCATION=`curl -s http://geoip.nekudo.com/api/$IP | jq '. | .city, .country.name | select(.!=null) | select(.!=false)'`
+
+	# broadcast
+	$BROADCAST_BIN "fail2ban > [$PROTOCOL] banned $IP from $LOCATION"
+else
+	# usage
+	echo "$ fail2ban-broadcast.sh PROTOCOL_NAME BANNED_IP (eg. $ fail2ban-broadcast.sh ssh 8.8.8.8)"
+fi
