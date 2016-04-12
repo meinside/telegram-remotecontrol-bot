@@ -3,7 +3,7 @@
 # system-broadcast.sh
 #
 # created by : meinside@gmail.com
-# last update: 2016.04.11.
+# last update: 2016.04.12.
 #
 # for broadcasting system status
 # through telegram-bot-remotecontrol
@@ -32,7 +32,7 @@ TEMP=`vcgencmd measure_temp`
 MEMORY=`free -o -h`
 
 # message
-MSG="system status: $HOSTNAME ($IP_ADDR)
+MSG="*system status*: $HOSTNAME ($IP_ADDR)
 
 $UNAME
 

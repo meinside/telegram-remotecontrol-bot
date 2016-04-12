@@ -436,7 +436,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 	for _, chat := range chats {
 		if isAvailableId(chat.UserId) {
-			if sent := client.SendMessage(chat.ChatId, &message, map[string]interface{}{}); !sent.Ok {
+			if sent := client.SendMessage(
+				chat.ChatId,
+				&message,
+				map[string]interface{}{
+					"parse_mode": bot.ParseModeMarkdown,
+				}); !sent.Ok {
 				log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
 
 				// log error to db

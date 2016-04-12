@@ -3,7 +3,7 @@
 # fail2ban-broadcast.sh
 #
 # created by : meinside@gmail.com
-# last update: 2016.04.11.
+# last update: 2016.04.12.
 #
 # for broadcasting a message on fail2ban's ban action
 # through telegram-bot-remotecontrol
@@ -56,7 +56,7 @@ if [ $# -ge 2 ]; then
 	LOCATION=`curl -s http://geoip.nekudo.com/api/$IP | jq '. | .city, .country.name | select(.!=null) | select(.!=false)'`
 
 	# broadcast
-	$BROADCAST_BIN "fail2ban > [$PROTOCOL] banned $IP from $LOCATION"
+	$BROADCAST_BIN "*fail2ban >* [$PROTOCOL] banned $IP from $LOCATION"
 else
 	# usage
 	echo "$ fail2ban-broadcast.sh PROTOCOL_NAME BANNED_IP (eg. $ fail2ban-broadcast.sh ssh 8.8.8.8)"

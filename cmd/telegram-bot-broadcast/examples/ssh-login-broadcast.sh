@@ -3,7 +3,7 @@
 # ssh-login-broadcast.sh
 #
 # created by : meinside@gmail.com
-# last update: 2016.04.11.
+# last update: 2016.04.12.
 #
 # for broadcasting successful ssh logins
 # through telegram-bot-remotecontrol
@@ -31,5 +31,5 @@ BROADCAST_BIN="/path/to/bin/telegram-bot-broadcast"	# XXX - edit this path
 # on session open,
 if [ $PAM_TYPE == "open_session" ]; then
 	# broadcast
-	$BROADCAST_BIN "sshd > $PAM_USER has successfully logged into `hostname`, from $PAM_RHOST"
+	$BROADCAST_BIN "*sshd >* $PAM_USER has successfully logged into `hostname`, from $PAM_RHOST"
 fi

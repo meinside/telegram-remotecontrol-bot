@@ -3,7 +3,7 @@
 # transmission-complete-broadcast.sh
 #
 # created by : meinside@gmail.com
-# last update: 2016.04.11.
+# last update: 2016.04.12.
 #
 # for broadcasting transmission download complete message
 # through telegram-bot-remotecontrol
@@ -33,4 +33,4 @@
 BROADCAST_BIN="/path/to/bin/telegram-bot-broadcast"	# XXX - edit this path
 
 # broadcast
-$BROADCAST_BIN "transmission > download completed: '$TR_TORRENT_NAME' in $TR_TORRENT_DIR"
+$BROADCAST_BIN "*transmission >* download completed: '$TR_TORRENT_NAME' in $TR_TORRENT_DIR"
