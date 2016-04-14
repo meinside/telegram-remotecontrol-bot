@@ -57,13 +57,13 @@ var launched time.Time
 var db *helper.Database
 
 // keyboards
-var allKeyboards = [][]string{
-	[]string{conf.CommandTransmissionList, conf.CommandTransmissionAdd, conf.CommandTransmissionRemove, conf.CommandTransmissionDelete},
-	[]string{conf.CommandServiceStart, conf.CommandServiceStop},
-	[]string{conf.CommandStatus, conf.CommandLogs, conf.CommandHelp},
+var allKeyboards = [][]bot.KeyboardButton{
+	bot.NewKeyboardButtons(conf.CommandTransmissionList, conf.CommandTransmissionAdd, conf.CommandTransmissionRemove, conf.CommandTransmissionDelete),
+	bot.NewKeyboardButtons(conf.CommandServiceStart, conf.CommandServiceStop),
+	bot.NewKeyboardButtons(conf.CommandStatus, conf.CommandLogs, conf.CommandHelp),
 }
-var cancelKeyboard = [][]string{
-	[]string{conf.CommandCancel},
+var cancelKeyboard = [][]bot.KeyboardButton{
+	bot.NewKeyboardButtons(conf.CommandCancel),
 }
 
 // initialization
@@ -177,7 +177,7 @@ func getStatus() string {
 }
 
 // parse service command
-func parseServiceCommand(txt string) (message string, keyboards [][]string) {
+func parseServiceCommand(txt string) (message string, keyboards [][]bot.KeyboardButton) {
 	message = conf.MessageNoControllableServices
 	keyboards = nil
 
@@ -207,9 +207,9 @@ func parseServiceCommand(txt string) (message string, keyboards [][]string) {
 					keys = append(keys, fmt.Sprintf("%s %s", cmd, v))
 				}
 
-				keyboards = [][]string{
-					keys,
-					[]string{conf.CommandCancel},
+				keyboards = [][]bot.KeyboardButton{
+					bot.NewKeyboardButtons(keys...),
+					bot.NewKeyboardButtons(conf.CommandCancel),
 				}
 			}
 		}
@@ -276,7 +276,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 						CurrentStatus: StatusWaitingServiceName,
 					}
 
-					var keyboards [][]string
+					var keyboards [][]bot.KeyboardButton
 					message, keyboards = parseServiceCommand(txt)
 
 					if keyboards != nil {
@@ -341,7 +341,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 						CurrentStatus: StatusWaiting,
 					}
 
-					var keyboards [][]string
+					var keyboards [][]bot.KeyboardButton
 					message, keyboards = parseServiceCommand(txt)
 
 					if keyboards != nil {

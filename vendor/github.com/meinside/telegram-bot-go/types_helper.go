@@ -597,3 +597,20 @@ func (c ChosenInlineResult) String() string {
 	}
 	return fmt.Sprintf("%+v", c)
 }
+
+////////////////////////////////
+// Helper functions for KeyboardButton
+//
+
+// Helper function for generating an array of KeyboardButtons
+func NewKeyboardButtons(texts ...string) []KeyboardButton {
+	keyboards := []KeyboardButton{}
+
+	for _, text := range texts {
+		keyboards = append(keyboards, KeyboardButton{
+			Text: text,
+		})
+	}
+
+	return keyboards
+}
