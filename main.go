@@ -28,7 +28,6 @@ type Status int16
 
 const (
 	StatusWaiting                   Status = iota
-	StatusWaitingServiceName        Status = iota
 	StatusWaitingTransmissionUpload Status = iota
 	StatusWaitingTransmissionRemove Status = iota
 	StatusWaitingTransmissionDelete Status = iota
@@ -176,8 +175,8 @@ func getStatus() string {
 	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", helper.GetUptime(launched), helper.GetMemoryUsage())
 }
 
-// parse service command
-func parseServiceCommand(txt string) (message string, keyboards [][]bot.KeyboardButton) {
+// parse service command and start/stop given service
+func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
 	message = conf.MessageNoControllableServices
 	keyboards = nil
 
@@ -188,28 +187,31 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.Keyboard
 			if isControllableService(service) {
 				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
 					if output, ok := services.Start(service); ok {
-						message = fmt.Sprintf("Started service: *%s*", service)
+						message = fmt.Sprintf("Started service: %s", service)
 					} else {
 						message = output
 					}
 				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
 					if output, ok := services.Stop(service); ok {
-						message = fmt.Sprintf("Stopped service: *%s*", service)
+						message = fmt.Sprintf("Stopped service: %s", service)
 					} else {
 						message = output
 					}
 				}
 			} else {
-				message = conf.MessageControllableServices
-
-				keys := []string{}
-				for _, v := range controllableServices {
-					keys = append(keys, fmt.Sprintf("%s %s", cmd, v))
+				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
+					message = conf.MessageServiceToStart
+				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
+					message = conf.MessageServiceToStop
 				}
 
-				keyboards = [][]bot.KeyboardButton{
-					bot.NewKeyboardButtons(keys...),
-					bot.NewKeyboardButtons(conf.CommandCancel),
+				keys := map[string]string{}
+				for _, v := range controllableServices {
+					keys[v] = fmt.Sprintf("%s %s", cmd, v)
+				}
+
+				keyboards = [][]bot.InlineKeyboardButton{
+					bot.NewInlineKeyboardButtonsWithCallbackData(keys),
 				}
 			}
 		}
@@ -271,18 +273,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			// systemctl
 			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
 				if len(controllableServices) > 0 {
-					pool.Sessions[userId] = Session{
-						UserId:        userId,
-						CurrentStatus: StatusWaitingServiceName,
-					}
-
-					var keyboards [][]bot.KeyboardButton
+					var keyboards [][]bot.InlineKeyboardButton
 					message, keyboards = parseServiceCommand(txt)
 
 					if keyboards != nil {
-						options["reply_markup"] = bot.ReplyKeyboardMarkup{
-							Keyboard:       keyboards,
-							ResizeKeyboard: true,
+						options["reply_markup"] = bot.InlineKeyboardMarkup{
+							InlineKeyboard: keyboards,
 						}
 					}
 				} else {
@@ -327,41 +323,16 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				message = getLogs()
 			case strings.HasPrefix(txt, conf.CommandHelp):
 				message = getHelp()
+				options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
+					InlineKeyboard: [][]bot.InlineKeyboardButton{
+						bot.NewInlineKeyboardButtonsWithUrl(map[string]string{
+							"GitHub": "https://github.com/meinside/telegram-bot-remotecontrol",
+						}),
+					},
+				}
 			// fallback
 			default:
 				message = fmt.Sprintf("*%s*: %s", txt, conf.MessageUnknownCommand)
-			}
-		case StatusWaitingServiceName:
-			switch {
-			// systemctl
-			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
-				if len(controllableServices) > 0 {
-					pool.Sessions[userId] = Session{
-						UserId:        userId,
-						CurrentStatus: StatusWaiting,
-					}
-
-					var keyboards [][]bot.KeyboardButton
-					message, keyboards = parseServiceCommand(txt)
-
-					if keyboards != nil {
-						options["reply_markup"] = bot.ReplyKeyboardMarkup{
-							Keyboard:       keyboards,
-							ResizeKeyboard: true,
-						}
-					}
-				} else {
-					message = conf.MessageNoControllableServices
-				}
-			// cancel
-			default:
-				message = conf.MessageCanceled
-			}
-
-			// reset status
-			pool.Sessions[userId] = Session{
-				UserId:        userId,
-				CurrentStatus: StatusWaiting,
 			}
 		case StatusWaitingTransmissionUpload:
 			switch {
@@ -428,6 +399,53 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		db.LogError(fmt.Sprintf("no session for id: %s", userId))
 	}
 	pool.Unlock()
+
+	return result
+}
+
+// process incoming callback query
+func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
+	query := *update.CallbackQuery
+	txt := *query.Data
+
+	// process result
+	result := false
+
+	if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) {
+		message, _ := parseServiceCommand(txt)
+		answerOption := map[string]interface{}{
+			"text": message,
+		}
+
+		// answer callback query
+		if apiResult := b.AnswerCallbackQuery(query.Id, answerOption); apiResult.Ok {
+			options := map[string]interface{}{
+				"chat_id":    query.Message.Chat.Id,
+				"message_id": query.Message.MessageId,
+				"reply_markup": bot.ReplyKeyboardMarkup{
+					Keyboard:       allKeyboards,
+					ResizeKeyboard: true,
+				},
+			}
+
+			// edit message
+			if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
+				result = true
+			} else {
+				log.Printf("*** Failed to edit message text: %s\n", *apiResult.Description)
+
+				db.LogError(fmt.Sprintf("failed to edit message text: %s", *apiResult.Description))
+			}
+		} else {
+			log.Printf("*** Failed to answer callback query: %+v\n", query)
+
+			db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
+		}
+	} else {
+		log.Printf("*** Unprocessable callback query: %s\n", txt)
+
+		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
+	}
 
 	return result
 }
@@ -508,8 +526,12 @@ func main() {
 			// wait for new updates
 			client.StartMonitoringUpdates(0, monitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {
-					if update.Message != nil {
+					if update.HasMessage() {
+						// process message
 						processUpdate(b, update)
+					} else if update.HasCallbackQuery() {
+						// process callback query
+						processCallbackQuery(b, update)
 					}
 				} else {
 					log.Printf("*** Error while receiving update (%s)\n", err)
