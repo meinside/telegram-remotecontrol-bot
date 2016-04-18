@@ -143,8 +143,8 @@ Following commands are supported:
 
 *For Systemctl*
 
-/servicestart _SERVICE_ : start a service
-/servicestop _SERVICE_ : stop a service
+/servicestart : start a service
+/servicestop  : stop a service
 
 *Others*
 
