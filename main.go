@@ -419,16 +419,11 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 
 		// answer callback query
 		if apiResult := b.AnswerCallbackQuery(query.Id, answerOption); apiResult.Ok {
+			// edit message and remove inline keyboards
 			options := map[string]interface{}{
 				"chat_id":    query.Message.Chat.Id,
 				"message_id": query.Message.MessageId,
-				"reply_markup": bot.ReplyKeyboardMarkup{
-					Keyboard:       allKeyboards,
-					ResizeKeyboard: true,
-				},
 			}
-
-			// edit message
 			if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
 				result = true
 			} else {
