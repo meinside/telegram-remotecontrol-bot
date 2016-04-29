@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/pkg/profile"
@@ -484,6 +487,15 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	db.Log("starting server...")
+
+	// catch SIGINT and SIGTERM and terminate gracefully
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		db.Log("stopping server...")
+		os.Exit(1)
+	}()
 
 	client := bot.NewClient(apiToken)
 	client.Verbose = isVerbose
