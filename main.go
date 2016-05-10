@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -25,6 +26,8 @@ import (
 const (
 	//DoProfiling = true
 	DoProfiling = false
+
+	GithubPageUrl = "https://github.com/meinside/telegram-bot-remotecontrol"
 )
 
 type Status int16
@@ -32,8 +35,6 @@ type Status int16
 const (
 	StatusWaiting                   Status = iota
 	StatusWaitingTransmissionUpload Status = iota
-	StatusWaitingTransmissionRemove Status = iota
-	StatusWaitingTransmissionDelete Status = iota
 )
 
 type Session struct {
@@ -181,7 +182,6 @@ func getStatus() string {
 // parse service command and start/stop given service
 func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
 	message = conf.MessageNoControllableServices
-	keyboards = nil
 
 	for _, cmd := range []string{conf.CommandServiceStart, conf.CommandServiceStop} {
 		if strings.HasPrefix(txt, cmd) {
@@ -219,6 +219,45 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 			}
 		}
 		continue
+	}
+
+	return message, keyboards
+}
+
+// parse transmission command
+func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
+	if torrents, _ := transmission.GetTorrents(); len(torrents) > 0 {
+		for _, cmd := range []string{conf.CommandTransmissionRemove, conf.CommandTransmissionDelete} {
+			if strings.HasPrefix(txt, cmd) {
+				param := strings.TrimSpace(strings.Replace(txt, cmd, "", 1))
+
+				if _, err := strconv.Atoi(param); err == nil { // if torrent id number is given,
+					if strings.HasPrefix(txt, conf.CommandTransmissionRemove) { // remove torrent
+						message = transmission.RemoveTorrent(param)
+					} else if strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // delete service
+						message = transmission.DeleteTorrent(param)
+					}
+				} else {
+					if strings.HasPrefix(txt, conf.CommandTransmissionRemove) { // remove torrent
+						message = conf.MessageTransmissionRemove
+					} else if strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // delete torrent
+						message = conf.MessageTransmissionDelete
+					}
+
+					// inline keyboards
+					keys := map[string]string{}
+					for _, t := range torrents {
+						keys[fmt.Sprintf("%d. %s", t.Id, t.Name)] = fmt.Sprintf("%s %d", cmd, t.Id)
+					}
+					keyboards = [][]bot.InlineKeyboardButton{
+						bot.NewInlineKeyboardButtonsWithCallbackData(keys),
+					}
+				}
+			}
+			continue
+		}
+	} else {
+		message = conf.MessageTransmissionNoTorrents
 	}
 
 	return message, keyboards
@@ -300,25 +339,14 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					Keyboard:       cancelKeyboard,
 					ResizeKeyboard: true,
 				}
-			case strings.HasPrefix(txt, conf.CommandTransmissionRemove):
-				message = conf.MessageTransmissionRemove
-				pool.Sessions[userId] = Session{
-					UserId:        userId,
-					CurrentStatus: StatusWaitingTransmissionRemove,
-				}
-				options["reply_markup"] = bot.ReplyKeyboardMarkup{
-					Keyboard:       cancelKeyboard,
-					ResizeKeyboard: true,
-				}
-			case strings.HasPrefix(txt, conf.CommandTransmissionDelete):
-				message = conf.MessageTransmissionDelete
-				pool.Sessions[userId] = Session{
-					UserId:        userId,
-					CurrentStatus: StatusWaitingTransmissionDelete,
-				}
-				options["reply_markup"] = bot.ReplyKeyboardMarkup{
-					Keyboard:       cancelKeyboard,
-					ResizeKeyboard: true,
+			case strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete):
+				var keyboards [][]bot.InlineKeyboardButton
+				message, keyboards = parseTransmissionCommand(txt)
+
+				if keyboards != nil {
+					options["reply_markup"] = bot.InlineKeyboardMarkup{
+						InlineKeyboard: keyboards,
+					}
 				}
 			case strings.HasPrefix(txt, conf.CommandStatus):
 				message = getStatus()
@@ -329,7 +357,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
 					InlineKeyboard: [][]bot.InlineKeyboardButton{
 						bot.NewInlineKeyboardButtonsWithUrl(map[string]string{
-							"GitHub": "https://github.com/meinside/telegram-bot-remotecontrol",
+							"GitHub": GithubPageUrl,
 						}),
 					},
 				}
@@ -351,32 +379,6 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 
 				message = transmission.AddTorrent(torrent)
-			}
-
-			// reset status
-			pool.Sessions[userId] = Session{
-				UserId:        userId,
-				CurrentStatus: StatusWaiting,
-			}
-		case StatusWaitingTransmissionRemove:
-			switch {
-			case strings.HasPrefix(txt, conf.CommandCancel):
-				message = conf.MessageCanceled
-			default:
-				message = transmission.RemoveTorrent(txt)
-			}
-
-			// reset status
-			pool.Sessions[userId] = Session{
-				UserId:        userId,
-				CurrentStatus: StatusWaiting,
-			}
-		case StatusWaitingTransmissionDelete:
-			switch {
-			case strings.HasPrefix(txt, conf.CommandCancel):
-				message = conf.MessageCanceled
-			default:
-				message = transmission.DeleteTorrent(txt)
 			}
 
 			// reset status
@@ -414,14 +416,20 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	// process result
 	result := false
 
-	if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) {
-		message, _ := parseServiceCommand(txt)
-		answerOption := map[string]interface{}{
-			"text": message,
-		}
+	var message string = ""
+	if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) { // service
+		message, _ = parseServiceCommand(txt)
+	} else if strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // transmission
+		message, _ = parseTransmissionCommand(txt)
+	} else {
+		log.Printf("*** Unprocessable callback query: %s\n", txt)
 
+		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
+	}
+
+	if len(message) > 0 {
 		// answer callback query
-		if apiResult := b.AnswerCallbackQuery(query.Id, answerOption); apiResult.Ok {
+		if apiResult := b.AnswerCallbackQuery(query.Id, map[string]interface{}{"text": message}); apiResult.Ok {
 			// edit message and remove inline keyboards
 			options := map[string]interface{}{
 				"chat_id":    query.Message.Chat.Id,
@@ -439,10 +447,6 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 
 			db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
 		}
-	} else {
-		log.Printf("*** Unprocessable callback query: %s\n", txt)
-
-		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
 	}
 
 	return result

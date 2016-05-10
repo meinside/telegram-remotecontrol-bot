@@ -110,38 +110,46 @@ func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err e
 	return res, err
 }
 
-// for showing the list of transmission
-func GetList() string {
-	if output, err := post(transmissionRpcRequest{
+// for retrieving torrent objects
+func GetTorrents() (torrents []transmissionRpcResponseTorrent, err error) {
+	var output []byte
+	if output, err = post(transmissionRpcRequest{
 		Method: "torrent-get",
 		Arguments: map[string]interface{}{
 			"fields": torrentFields,
 		},
 	}, numRetries); err == nil {
 		var result transmissionRpcResponse
-		if err := json.Unmarshal(output, &result); err == nil {
+		if err = json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
-				if numTorrents := len(result.Arguments.Torrents); numTorrents > 0 {
-					strs := make([]string, numTorrents)
-					for i, t := range result.Arguments.Torrents {
-						if len(t.Error) > 0 {
-							strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%s*)", t.Id, t.Name, readableSize(t.TotalSize), t.Error)
-						} else {
-							strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%.2f%%*)", t.Id, t.Name, readableSize(t.TotalSize), t.PercentDone*100.0)
-						}
-					}
-					return strings.Join(strs, "\n")
-				} else {
-					return "No torrents."
-				}
+				torrents = result.Arguments.Torrents
 			} else {
-				return fmt.Sprintf("Failed to list torrents.")
+				err = fmt.Errorf("Failed to list torrents.")
 			}
+		}
+	}
+	return torrents, err
+}
+
+// for showing the list of transmission
+func GetList() string {
+	if torrents, err := GetTorrents(); err == nil {
+		numTorrents := len(torrents)
+		if numTorrents > 0 {
+			strs := make([]string, numTorrents)
+			for i, t := range torrents {
+				if len(t.Error) > 0 {
+					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%s*)", t.Id, t.Name, readableSize(t.TotalSize), t.Error)
+				} else {
+					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%.2f%%*)", t.Id, t.Name, readableSize(t.TotalSize), t.PercentDone*100.0)
+				}
+			}
+			return strings.Join(strs, "\n")
 		} else {
-			return fmt.Sprintf("Malformed RPC server response: %s", string(output))
+			return "No torrents."
 		}
 	} else {
-		return fmt.Sprintf("Failed to list torrents - %s", string(output))
+		return err.Error()
 	}
 }
 
@@ -185,9 +193,9 @@ func removeTorrent(id string, deleteLocal bool) string {
 			if err := json.Unmarshal(output, &result); err == nil {
 				if result.Result == "success" {
 					if deleteLocal {
-						return "Given torrent and its data were successfully deleted."
+						return fmt.Sprintf("Torrent id %s and its data were successfully deleted.", id)
 					} else {
-						return "Given torrent was successfully removed from the list."
+						return fmt.Sprintf("Torrent id %s was successfully removed from the list.", id)
 					}
 				} else {
 					return fmt.Sprintf("Failed to remove given torrent")

@@ -37,6 +37,7 @@ const (
 	MessageTransmissionUpload     = "Input magnet, url, or file of target torrent:"
 	MessageTransmissionRemove     = "Input the number of torrent to remove from the list:"
 	MessageTransmissionDelete     = "Input the number of torrent to delete from the list and local storage:"
+	MessageTransmissionNoTorrents = "No torrents."
 	MessageCanceled               = "Canceled."
 
 	//
