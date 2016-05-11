@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/meinside/telegram-bot-remotecontrol/conf"
 )
 
 const (
@@ -146,7 +148,7 @@ func GetList() string {
 			}
 			return strings.Join(strs, "\n")
 		} else {
-			return "No torrents."
+			return conf.MessageTransmissionNoTorrents
 		}
 	} else {
 		return err.Error()
