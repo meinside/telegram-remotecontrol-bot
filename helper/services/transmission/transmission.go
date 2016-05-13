@@ -215,24 +215,24 @@ func removeTorrent(id string, deleteLocal bool) string {
 
 // convert given number to human-readable size string
 func readableSize(num int64) (str string) {
-	if num < 1024 {
-		// b
+	if num < 1<<10 {
+		// bytes
 		str = fmt.Sprintf("%dB", num)
 	} else {
-		if num < 1024*1024 {
-			// kb
-			str = fmt.Sprintf("%.1fKB", float64(num)/1024)
+		if num < 1<<20 {
+			// kbytes
+			str = fmt.Sprintf("%.1fKB", float64(num)/(1<<10))
 		} else {
-			if num < 1024*1024*1024 {
-				// mb
-				str = fmt.Sprintf("%.1fMB", float64(num)/(1024*1024))
+			if num < 1<<30 {
+				// mbytes
+				str = fmt.Sprintf("%.1fMB", float64(num)/(1<<20))
 			} else {
-				if num < 1024*1024*1024*1024 {
-					// gb
-					str = fmt.Sprintf("%.2fGB", float64(num)/(1024*1024*1024))
+				if num < 1<<40 {
+					// gbytes
+					str = fmt.Sprintf("%.2fGB", float64(num)/(1<<30))
 				} else {
-					// tb
-					str = fmt.Sprintf("%.2fTB", float64(num)/(1024*1024*1024*1024))
+					// tbytes
+					str = fmt.Sprintf("%.2fTB", float64(num)/(1<<40))
 				}
 			}
 		}
