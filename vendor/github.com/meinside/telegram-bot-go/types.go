@@ -194,6 +194,7 @@ type Sticker struct {
 	Width    int        `json:"width"`
 	Height   int        `json:"height"`
 	Thumb    *PhotoSize `json:"thumb,omitempty"`
+	Emoji    *string    `json:"emoji,omitempty"`
 	FileSize int        `json:"file_size,omitempty"`
 }
 
@@ -337,6 +338,7 @@ type Message struct {
 	Date                  int             `json:"date"`
 	Chat                  *Chat           `json:"chat"`
 	ForwardFrom           *User           `json:"forward_from,omitempty"`
+	ForwardFromChat       *Chat           `json:"forward_from_chat,omitempty"`
 	ForwardDate           int             `json:"forward_date,omitempty"`
 	ReplyToMessage        *Message        `json:"reply_to_message,omitempty"`
 	Text                  *string         `json:"text,omitempty"`
