@@ -389,7 +389,7 @@ func (b *Bot) KickChatMember(chatId interface{}, userId int) (result ApiResult) 
 
 // Unban chat member
 //
-//https://core.telegram.org/bots/api#unbanchatmember
+// https://core.telegram.org/bots/api#unbanchatmember
 func (b *Bot) UnbanChatMember(chatId interface{}, userId int) (result ApiResult) {
 	// essential params
 	params := map[string]interface{}{
@@ -398,6 +398,67 @@ func (b *Bot) UnbanChatMember(chatId interface{}, userId int) (result ApiResult)
 	}
 
 	return b.requestResult("unbanChatMember", params)
+}
+
+// Get chat
+//
+// https://core.telegram.org/bots/api#getchat
+func (b *Bot) GetChat(chatId interface{}) (result ApiResultChat) {
+	// essential params
+	params := map[string]interface{}{
+		"chat_id": chatId,
+	}
+
+	return b.requestResultChat("getChat", params)
+}
+
+// Leave chat
+//
+// https://core.telegram.org/bots/api#leavechat
+func (b *Bot) LeaveChat(chatId interface{}) (result ApiResult) {
+	// essential params
+	params := map[string]interface{}{
+		"chat_id": chatId,
+	}
+
+	return b.requestResult("leaveChat", params)
+}
+
+// Get chat administrators
+//
+// https://core.telegram.org/bots/api#getchatadministrators
+func (b *Bot) GetChatAdministrators(chatId interface{}) (result ApiResultChatAdministrators) {
+	// essential params
+	params := map[string]interface{}{
+		"chat_id": chatId,
+	}
+
+	return b.requestResultChatAdministrators("getChatAdministrators", params)
+}
+
+// Get chat member
+//
+// https://core.telegram.org/bots/api#getchatmember
+func (b *Bot) GetChatMember(chatId interface{}, userId int) (result ApiResultChatMember) {
+	// essential params
+	params := map[string]interface{}{
+		"chat_id": chatId,
+		"user_id": userId,
+	}
+
+	return b.requestResultChatMember("getChatMember", params)
+}
+
+// Get chat members count
+//
+// https://core.telegram.org/bots/api#getchatmemberscount
+func (b *Bot) GetChatMembersCount(chatId interface{}) (result ApiResultInt) {
+	// essential params
+	params := map[string]interface{}{
+		"chat_id": chatId,
+	}
+
+	return b.requestResultInt("getChatMembersCount", params)
 }
 
 // Answer callback query
@@ -820,6 +881,110 @@ func (b *Bot) requestResultFile(method string, params map[string]interface{}) (r
 	b.error(errStr)
 
 	return ApiResultFile{Ok: false, Description: &errStr}
+}
+
+// Send request for ApiResultChat and fetch its result.
+func (b *Bot) requestResultChat(method string, params map[string]interface{}) (result ApiResultChat) {
+	var errStr string
+
+	if resp, success := b.sendRequest(method, params); success {
+		defer resp.Body.Close()
+
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			var jsonResponse ApiResultChat
+			if err := json.Unmarshal(body, &jsonResponse); err == nil {
+				return jsonResponse
+			} else {
+				errStr = fmt.Sprintf("json parse error: %s (%s)", err.Error(), string(body))
+			}
+		} else {
+			errStr = fmt.Sprintf("response read error: %s", err.Error())
+		}
+	} else {
+		errStr = fmt.Sprintf("%s failed", method)
+	}
+
+	b.error(errStr)
+
+	return ApiResultChat{Ok: false, Description: &errStr}
+}
+
+// Send request for ApiResultChatAdministrator and fetch its result.
+func (b *Bot) requestResultChatAdministrators(method string, params map[string]interface{}) (result ApiResultChatAdministrators) {
+	var errStr string
+
+	if resp, success := b.sendRequest(method, params); success {
+		defer resp.Body.Close()
+
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			var jsonResponse ApiResultChatAdministrators
+			if err := json.Unmarshal(body, &jsonResponse); err == nil {
+				return jsonResponse
+			} else {
+				errStr = fmt.Sprintf("json parse error: %s (%s)", err.Error(), string(body))
+			}
+		} else {
+			errStr = fmt.Sprintf("response read error: %s", err.Error())
+		}
+	} else {
+		errStr = fmt.Sprintf("%s failed", method)
+	}
+
+	b.error(errStr)
+
+	return ApiResultChatAdministrators{Ok: false, Description: &errStr}
+}
+
+// Send request for ApiResultChatMember and fetch its result.
+func (b *Bot) requestResultChatMember(method string, params map[string]interface{}) (result ApiResultChatMember) {
+	var errStr string
+
+	if resp, success := b.sendRequest(method, params); success {
+		defer resp.Body.Close()
+
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			var jsonResponse ApiResultChatMember
+			if err := json.Unmarshal(body, &jsonResponse); err == nil {
+				return jsonResponse
+			} else {
+				errStr = fmt.Sprintf("json parse error: %s (%s)", err.Error(), string(body))
+			}
+		} else {
+			errStr = fmt.Sprintf("response read error: %s", err.Error())
+		}
+	} else {
+		errStr = fmt.Sprintf("%s failed", method)
+	}
+
+	b.error(errStr)
+
+	return ApiResultChatMember{Ok: false, Description: &errStr}
+}
+
+// Send request for ApiResultInt and fetch its result.
+func (b *Bot) requestResultInt(method string, params map[string]interface{}) (result ApiResultInt) {
+	var errStr string
+
+	if resp, success := b.sendRequest(method, params); success {
+		defer resp.Body.Close()
+
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			var jsonResponse ApiResultInt
+			if err := json.Unmarshal(body, &jsonResponse); err == nil {
+				return jsonResponse
+			} else {
+				errStr = fmt.Sprintf("json parse error: %s (%s)", err.Error(), string(body))
+			}
+		} else {
+			errStr = fmt.Sprintf("response read error: %s", err.Error())
+		}
+	} else {
+		errStr = fmt.Sprintf("%s failed", method)
+	}
+
+	b.error(errStr)
+
+	return ApiResultInt{Ok: false, Description: &errStr}
 }
 
 // Handle Webhook request.

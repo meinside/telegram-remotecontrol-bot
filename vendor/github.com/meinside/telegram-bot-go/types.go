@@ -56,16 +56,30 @@ const (
 type MessageEntityType string
 
 const (
-	MessageEntityTypeMention    = "mention"
-	MessageEntityTypeHashTag    = "hashtag"
-	MessageEntityTypeBotCommand = "bot_command"
-	MessageEntityTypeUrl        = "url"
-	MessageEntityTypeEmail      = "email"
-	MessageEntityTypeBold       = "bold"
-	MessageEntityTypeItalic     = "italic"
-	MessageEntityTypeCode       = "code"
-	MessageEntityTypePre        = "pre"
-	MessageEntityTypeTextLink   = "text_link"
+	MessageEntityTypeMention     = "mention"
+	MessageEntityTypeHashTag     = "hashtag"
+	MessageEntityTypeBotCommand  = "bot_command"
+	MessageEntityTypeUrl         = "url"
+	MessageEntityTypeEmail       = "email"
+	MessageEntityTypeBold        = "bold"
+	MessageEntityTypeItalic      = "italic"
+	MessageEntityTypeCode        = "code"
+	MessageEntityTypePre         = "pre"
+	MessageEntityTypeTextLink    = "text_link"
+	MessageEntityTypeTextMention = "text_mention"
+)
+
+// Chat Member Statuses
+//
+// https://core.telegram.org/bots/api#chatmember
+type ChatMemberStatus string
+
+const (
+	ChatMemberStatusCreator       ChatMemberStatus = "creator"
+	ChatMemberStatusAdministrator ChatMemberStatus = "administrator"
+	ChatMemberStatusMember        ChatMemberStatus = "member"
+	ChatMemberStatusLeft          ChatMemberStatus = "left"
+	ChatMemberStatusKicked        ChatMemberStatus = "kicked"
 )
 
 // API result
@@ -110,12 +124,41 @@ type ApiResultUpdates struct {
 	Result      []Update `json:"result,omitempty"`
 }
 
+// API result for Chat
+type ApiResultChat struct {
+	Ok          bool    `json:"ok"`
+	Description *string `json:"description,omitempty"`
+	Result      *Chat   `json:"result,omitempty"`
+}
+
+// API result for ChatAdministrators
+type ApiResultChatAdministrators struct {
+	Ok          bool         `json:"ok"`
+	Description *string      `json:"description,omitempty"`
+	Result      []ChatMember `json:"result,omitempty"`
+}
+
+// API result for ChatMember
+type ApiResultChatMember struct {
+	Ok          bool       `json:"ok"`
+	Description *string    `json:"description,omitempty"`
+	Result      ChatMember `json:"result,omitempty"`
+}
+
+// API result for int
+type ApiResultInt struct {
+	Ok          bool    `json:"ok"`
+	Description *string `json:"description,omitempty"`
+	Result      int     `json:"result,omitempty"`
+}
+
 // Update
 //
 // https://core.telegram.org/bots/api#update
 type Update struct {
 	UpdateId           int                 `json:"update_id"`
 	Message            *Message            `json:"message,omitempty"`
+	EditedMessage      *Message            `json:"edited_message,omitempty"`
 	InlineQuery        *InlineQuery        `json:"inline_query,omitempty"`
 	ChosenInlineResult *ChosenInlineResult `json:"chosen_inline_result,omitempty"`
 	CallbackQuery      *CallbackQuery      `json:"callback_query,omitempty"`
@@ -162,7 +205,8 @@ type MessageEntity struct {
 	Type   MessageEntityType `json:"type"`
 	Offset int               `json:"offset"`
 	Length int               `json:"length"`
-	Url    *string           `json:"url,omitempty"`
+	Url    *string           `json:"url,omitempty"`  // for Type == "text_link" only,
+	User   *User             `json:"user,omitempty"` // for Type == "text_mention" only,
 }
 
 // PhotoSize
@@ -329,6 +373,14 @@ type ForceReply struct {
 	Selective  bool `json:"selective,omitempty"`
 }
 
+// ChatMember
+//
+// https://core.telegram.org/bots/api#chatmember
+type ChatMember struct {
+	User   *User            `json:"user"`
+	Status ChatMemberStatus `json:"status"`
+}
+
 // Message
 //
 // https://core.telegram.org/bots/api#message
@@ -341,6 +393,7 @@ type Message struct {
 	ForwardFromChat       *Chat           `json:"forward_from_chat,omitempty"`
 	ForwardDate           int             `json:"forward_date,omitempty"`
 	ReplyToMessage        *Message        `json:"reply_to_message,omitempty"`
+	EditDate              int             `json:"edit_date,omitempty"`
 	Text                  *string         `json:"text,omitempty"`
 	Entities              []MessageEntity `json:"entities,omitempty"`
 	Audio                 *Audio          `json:"audio,omitempty"`
