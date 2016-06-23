@@ -1,5 +1,5 @@
 [Unit]
-Description=telegram bot
+Description=Telegram Bot for Remote Control
 After=syslog.target
 After=network.target
 
@@ -8,7 +8,7 @@ Type=simple
 User=some_user
 Group=some_user
 WorkingDirectory=/path/to/telegram-bot-remotecontrol
-ExecStart=/path/to/telegram-bot-remotecontrol/telegrambot
+ExecStart=/path/to/telegram-bot-remotecontrol/telegrambot-bot-remotecontrol
 Restart=always
 RestartSec=5
 Environment=

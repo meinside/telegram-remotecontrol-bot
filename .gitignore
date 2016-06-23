@@ -1,6 +1,6 @@
 *.swp
-telegrambot
 db.sqlite*
 
 config.json
-cert/*
+
+telegram-bot-remotecontrol

@@ -40,13 +40,14 @@ and edit values to yours:
 ## 2. Build and run
 
 ```bash
-$ go build -o telegrambot main.go
+$ cd $GOPOATH/src/github.com/meinside/telegram-bot-remotecontrol
+$ go build
 ```
 
 and run it:
 
 ```bash
-$ ./telegrambot
+$ ./telegram-bot-remotecontrol
 ```
 
 ## 3. Run as a service
@@ -54,8 +55,8 @@ $ ./telegrambot
 ### a. systemd
 
 ```bash
-$ sudo cp systemd/telegrambot.service /lib/systemd/system/
-$ sudo vi /lib/systemd/system/telegrambot.service
+$ sudo cp systemd/telegram-bot-remotecontrol.service /lib/systemd/system/
+$ sudo vi /lib/systemd/system/telegram-bot-remotecontrol.service
 ```
 
 and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
@@ -63,13 +64,13 @@ and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
 It will launch automatically on boot with:
 
 ```bash
-$ sudo systemctl enable telegrambot.service
+$ sudo systemctl enable telegram-bot-remotecontrol.service
 ```
 
 and will start with:
 
 ```bash
-$ sudo systemctl start telegrambot.service
+$ sudo systemctl start telegram-bot-remotecontrol.service
 ```
 
 ## 4. Broadcast to all connected clients
