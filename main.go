@@ -62,7 +62,7 @@ var db *helper.Database
 // keyboards
 var allKeyboards = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(conf.CommandTransmissionList, conf.CommandTransmissionAdd, conf.CommandTransmissionRemove, conf.CommandTransmissionDelete),
-	bot.NewKeyboardButtons(conf.CommandServiceStart, conf.CommandServiceStop),
+	bot.NewKeyboardButtons(conf.CommandServiceStatus, conf.CommandServiceStart, conf.CommandServiceStop),
 	bot.NewKeyboardButtons(conf.CommandStatus, conf.CommandLogs, conf.CommandHelp),
 }
 var cancelKeyboard = [][]bot.KeyboardButton{
@@ -147,8 +147,9 @@ Following commands are supported:
 
 *For Systemctl*
 
-/servicestart : start a service
-/servicestop  : stop a service
+/servicestatus : show status of each service (systemctl is-active)
+/servicestart  : start a service (systemctl start)
+/servicestop   : stop a service (systemctl stop)
 
 *Others*
 
@@ -313,6 +314,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			case strings.HasPrefix(txt, conf.CommandStart):
 				message = conf.MessageDefault
 			// systemctl
+			case strings.HasPrefix(txt, conf.CommandServiceStatus):
+				message, _ = services.Status(controllableServices)
 			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
 				if len(controllableServices) > 0 {
 					var keyboards [][]bot.InlineKeyboardButton

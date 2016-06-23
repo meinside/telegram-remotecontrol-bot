@@ -18,8 +18,9 @@ const (
 	CommandCancel = "/cancel"
 
 	// commands for systemctl
-	CommandServiceStart = "/servicestart"
-	CommandServiceStop  = "/servicestop"
+	CommandServiceStatus = "/servicestatus"
+	CommandServiceStart  = "/servicestart"
+	CommandServiceStop   = "/servicestop"
 
 	// commands for transmission
 	CommandTransmissionList   = "/trlist"
