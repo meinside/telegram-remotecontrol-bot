@@ -53,6 +53,8 @@ var monitorInterval int
 var isVerbose bool
 var availableIds []string
 var controllableServices []string
+var rpcPort int
+var rpcUsername, rpcPasswd string
 var pool SessionPool
 var queue chan string
 var cliPort int
@@ -87,6 +89,12 @@ func init() {
 		apiToken = config.ApiToken
 		availableIds = config.AvailableIds
 		controllableServices = config.ControllableServices
+		rpcPort = config.TransmissionRpcPort
+		if rpcPort <= 0 {
+			rpcPort = conf.DefaultTransmissionRpcPort
+		}
+		rpcUsername = config.TransmissionRpcUsername
+		rpcPasswd = config.TransmissionRpcPasswd
 		monitorInterval = config.MonitorInterval
 		if monitorInterval <= 0 {
 			monitorInterval = conf.DefaultMonitorIntervalSeconds
@@ -227,16 +235,16 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 
 // parse transmission command
 func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
-	if torrents, _ := transmission.GetTorrents(); len(torrents) > 0 {
+	if torrents, _ := transmission.GetTorrents(rpcPort, rpcUsername, rpcPasswd); len(torrents) > 0 {
 		for _, cmd := range []string{conf.CommandTransmissionRemove, conf.CommandTransmissionDelete} {
 			if strings.HasPrefix(txt, cmd) {
 				param := strings.TrimSpace(strings.Replace(txt, cmd, "", 1))
 
 				if _, err := strconv.Atoi(param); err == nil { // if torrent id number is given,
 					if strings.HasPrefix(txt, conf.CommandTransmissionRemove) { // remove torrent
-						message = transmission.RemoveTorrent(param)
+						message = transmission.RemoveTorrent(rpcPort, rpcUsername, rpcPasswd, param)
 					} else if strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // delete service
-						message = transmission.DeleteTorrent(param)
+						message = transmission.DeleteTorrent(rpcPort, rpcUsername, rpcPasswd, param)
 					}
 				} else {
 					if strings.HasPrefix(txt, conf.CommandTransmissionRemove) { // remove torrent
@@ -331,7 +339,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 			// transmission
 			case strings.HasPrefix(txt, conf.CommandTransmissionList):
-				message = transmission.GetList()
+				message = transmission.GetList(rpcPort, rpcUsername, rpcPasswd)
 			case strings.HasPrefix(txt, conf.CommandTransmissionAdd):
 				message = conf.MessageTransmissionUpload
 				pool.Sessions[userId] = Session{
@@ -381,7 +389,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					torrent = txt
 				}
 
-				message = transmission.AddTorrent(torrent)
+				message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, torrent)
 			}
 
 			// reset status

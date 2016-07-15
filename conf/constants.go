@@ -7,6 +7,9 @@ const (
 	ParamMessage         = "m"
 	QueueSize            = 3
 
+	// for Transmission daemon
+	DefaultTransmissionRpcPort = 9091
+
 	// for monitoring
 	DefaultMonitorIntervalSeconds = 3
 

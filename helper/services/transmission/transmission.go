@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 )
 
 const (
-	transmissionRpcUrl               = "http://localhost:9091/transmission/rpc"
 	httpHeaderXTransmissionSessionId = "X-Transmission-Session-Id"
 	numRetries                       = 3
 )
@@ -54,10 +54,20 @@ type transmissionRpcResponseTorrent struct {
 
 var xTransmissionSessionId string = ""
 
+func getLocalTransmissionRpcUrl(port int, username, passwd string) string {
+	var rpcUrl string
+	if len(username) > 0 && len(passwd) > 0 {
+		rpcUrl = fmt.Sprintf("http://%s:%s@localhost:%d/transmission/rpc", url.QueryEscape(username), url.QueryEscape(passwd), port)
+	} else {
+		rpcUrl = fmt.Sprintf("http://localhost:%d/transmission/rpc", port)
+	}
+	return rpcUrl
+}
+
 // POST to Transmission RPC server
 //
 // https://trac.transmissionbt.com/browser/trunk/extras/rpc-spec.txt
-func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err error) {
+func post(port int, username, passwd string, request transmissionRpcRequest, numRetriesLeft int) (res []byte, err error) {
 	if numRetriesLeft <= 0 {
 		return res, fmt.Errorf("No more retries for this request: %v", request)
 	}
@@ -65,7 +75,7 @@ func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err e
 	var data []byte
 	if data, err = json.Marshal(request); err == nil {
 		var req *http.Request
-		if req, err = http.NewRequest("POST", transmissionRpcUrl, bytes.NewBuffer(data)); err == nil {
+		if req, err = http.NewRequest("POST", getLocalTransmissionRpcUrl(port, username, passwd), bytes.NewBuffer(data)); err == nil {
 			// headers
 			req.Header.Set(httpHeaderXTransmissionSessionId, xTransmissionSessionId)
 
@@ -79,7 +89,7 @@ func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err e
 						// update session id
 						xTransmissionSessionId = sessionId[0]
 
-						return post(request, numRetriesLeft-1) // XXX - retry
+						return post(port, username, passwd, request, numRetriesLeft-1) // XXX - retry
 					} else {
 						err = fmt.Errorf("Could not find '%s' value from http headers", httpHeaderXTransmissionSessionId)
 
@@ -100,7 +110,7 @@ func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err e
 			} else {
 				log.Printf("Error while sending request: %s\n", err.Error())
 
-				return post(request, numRetriesLeft-1) // XXX - retry
+				return post(port, username, passwd, request, numRetriesLeft-1) // XXX - retry
 			}
 		} else {
 			log.Printf("Error while building request: %s\n", err.Error())
@@ -113,14 +123,15 @@ func post(request transmissionRpcRequest, numRetriesLeft int) (res []byte, err e
 }
 
 // for retrieving torrent objects
-func GetTorrents() (torrents []transmissionRpcResponseTorrent, err error) {
+func GetTorrents(port int, username, passwd string) (torrents []transmissionRpcResponseTorrent, err error) {
 	var output []byte
-	if output, err = post(transmissionRpcRequest{
-		Method: "torrent-get",
-		Arguments: map[string]interface{}{
-			"fields": torrentFields,
-		},
-	}, numRetries); err == nil {
+	if output, err = post(port, username, passwd,
+		transmissionRpcRequest{
+			Method: "torrent-get",
+			Arguments: map[string]interface{}{
+				"fields": torrentFields,
+			},
+		}, numRetries); err == nil {
 		var result transmissionRpcResponse
 		if err = json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
@@ -134,8 +145,8 @@ func GetTorrents() (torrents []transmissionRpcResponseTorrent, err error) {
 }
 
 // for showing the list of transmission
-func GetList() string {
-	if torrents, err := GetTorrents(); err == nil {
+func GetList(port int, username, passwd string) string {
+	if torrents, err := GetTorrents(port, username, passwd); err == nil {
 		numTorrents := len(torrents)
 		if numTorrents > 0 {
 			strs := make([]string, numTorrents)
@@ -156,13 +167,14 @@ func GetList() string {
 }
 
 // for adding a torrent(with magnet or .torrent file) to the list of transmission
-func AddTorrent(torrent string) string {
-	if output, err := post(transmissionRpcRequest{
-		Method: "torrent-add",
-		Arguments: map[string]interface{}{
-			"filename": torrent,
-		},
-	}, numRetries); err == nil {
+func AddTorrent(port int, username, passwd, torrent string) string {
+	if output, err := post(port, username, passwd,
+		transmissionRpcRequest{
+			Method: "torrent-add",
+			Arguments: map[string]interface{}{
+				"filename": torrent,
+			},
+		}, numRetries); err == nil {
 		var result transmissionRpcResponse
 		if err := json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
@@ -182,22 +194,23 @@ func AddTorrent(torrent string) string {
 	}
 }
 
-func removeTorrent(id string, deleteLocal bool) string {
-	if numId, err := strconv.Atoi(id); err == nil {
-		if output, err := post(transmissionRpcRequest{
-			Method: "torrent-remove",
-			Arguments: map[string]interface{}{
-				"ids":               []int{numId},
-				"delete-local-data": deleteLocal,
-			},
-		}, numRetries); err == nil {
+func removeTorrent(port int, username, passwd, torrentId string, deleteLocal bool) string {
+	if numId, err := strconv.Atoi(torrentId); err == nil {
+		if output, err := post(port, username, passwd,
+			transmissionRpcRequest{
+				Method: "torrent-remove",
+				Arguments: map[string]interface{}{
+					"ids":               []int{numId},
+					"delete-local-data": deleteLocal,
+				},
+			}, numRetries); err == nil {
 			var result transmissionRpcResponse
 			if err := json.Unmarshal(output, &result); err == nil {
 				if result.Result == "success" {
 					if deleteLocal {
-						return fmt.Sprintf("Torrent id %s and its data were successfully deleted.", id)
+						return fmt.Sprintf("Torrent id %s and its data were successfully deleted.", torrentId)
 					} else {
-						return fmt.Sprintf("Torrent id %s was successfully removed from the list.", id)
+						return fmt.Sprintf("Torrent id %s was successfully removed from the list.", torrentId)
 					}
 				} else {
 					return fmt.Sprintf("Failed to remove given torrent")
@@ -209,7 +222,7 @@ func removeTorrent(id string, deleteLocal bool) string {
 			return fmt.Sprintf("Failed to remove given torrent - %s", err.Error())
 		}
 	} else {
-		return fmt.Sprintf("Not a valid torrent id: ", id)
+		return fmt.Sprintf("Not a valid torrent id: ", torrentId)
 	}
 }
 
@@ -241,11 +254,11 @@ func readableSize(num int64) (str string) {
 }
 
 // for canceling/removing a torrent from the list
-func RemoveTorrent(id string) string {
-	return removeTorrent(id, false)
+func RemoveTorrent(port int, username, passwd, torrentId string) string {
+	return removeTorrent(port, username, passwd, torrentId, false)
 }
 
 // for removing a torrent and its local data from the list
-func DeleteTorrent(id string) string {
-	return removeTorrent(id, true)
+func DeleteTorrent(port int, username, passwd, torrentId string) string {
+	return removeTorrent(port, username, passwd, torrentId, true)
 }

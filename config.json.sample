@@ -8,6 +8,9 @@
 	"controllable_services": [
 	],
 	"monitor_interval": 3,
+	"transmission_rpc_port": 9091,
+	"transmission_rpc_username": "",
+	"transmission_rpc_passwd": "",
 	"cli_port": 59992,
 	"is_verbose": false
 }

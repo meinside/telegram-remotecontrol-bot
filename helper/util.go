@@ -17,12 +17,15 @@ const (
 
 // struct for config file
 type Config struct {
-	ApiToken             string   `json:"api_token"`
-	AvailableIds         []string `json:"available_ids"`
-	ControllableServices []string `json:"controllable_services"`
-	MonitorInterval      int      `json:"monitor_interval"`
-	CliPort              int      `json:"cli_port"`
-	IsVerbose            bool     `json:"is_verbose"`
+	ApiToken                string   `json:"api_token"`
+	AvailableIds            []string `json:"available_ids"`
+	ControllableServices    []string `json:"controllable_services"`
+	MonitorInterval         int      `json:"monitor_interval"`
+	TransmissionRpcPort     int      `json:"transmission_rpc_port,omitempty"`
+	TransmissionRpcUsername string   `json:"transmission_rpc_username,omitempty"`
+	TransmissionRpcPasswd   string   `json:"transmission_rpc_passwd,omitempty"`
+	CliPort                 int      `json:"cli_port"`
+	IsVerbose               bool     `json:"is_verbose"`
 }
 
 // Read config
