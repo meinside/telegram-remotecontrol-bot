@@ -32,10 +32,19 @@ and edit values to yours:
 		"vpnserver"
 	],
 	"monitor_interval": 3,
+	"transmission_rpc_port": 9999,
+	"transmission_rpc_username": "some_user",
+	"transmission_rpc_passwd": "some_password",
 	"cli_port": 59992,
 	"is_verbose": false
 }
 ```
+
+When following values are omitted, default values will be applied:
+
+* **monitor_interval**: 3 seconds
+* **transmission_rpc_port**: 9091
+* **transmission_rpc_username** or **transmission_rpc_passwd**: no username and password (eg. when **rpc-authentication-required** = false)
 
 ## 2. Build and run
 
