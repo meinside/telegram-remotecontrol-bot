@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
+	"github.com/meinside/telegram-bot-remotecontrol/helper"
 )
 
 const (
@@ -152,9 +153,9 @@ func GetList(port int, username, passwd string) string {
 			strs := make([]string, numTorrents)
 			for i, t := range torrents {
 				if len(t.Error) > 0 {
-					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%s*)", t.Id, t.Name, readableSize(t.TotalSize), t.Error)
+					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%s*)", t.Id, helper.RemoveMarkdownChars(t.Name, " "), readableSize(t.TotalSize), t.Error)
 				} else {
-					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%.2f%%*)", t.Id, t.Name, readableSize(t.TotalSize), t.PercentDone*100.0)
+					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%.2f%%*)", t.Id, helper.RemoveMarkdownChars(t.Name, " "), readableSize(t.TotalSize), t.PercentDone*100.0)
 				}
 			}
 			return strings.Join(strs, "\n")

@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -62,4 +63,14 @@ func GetMemoryUsage() (usage string) {
 	runtime.ReadMemStats(m)
 
 	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
+}
+
+// XXX - remove markdown characters for avoiding
+// 'Bad Request: Can't parse message text: Can't find end of the entity starting at byte offset ...' error
+// from the server
+func RemoveMarkdownChars(original, replaceWith string) string {
+	removed := strings.Replace(original, "*", replaceWith, -1)
+	removed = strings.Replace(removed, "_", replaceWith, -1)
+	removed = strings.Replace(removed, "`", replaceWith, -1)
+	return removed
 }
