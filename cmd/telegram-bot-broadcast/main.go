@@ -29,7 +29,8 @@ func main() {
 				cliPort = conf.DefaultCliPortNumber
 			}
 
-			message := strings.Join(args, " ")
+			// XXX - remove markdown characters from given message
+			message := helper.RemoveMarkdownChars(strings.Join(args, " "), " ")
 
 			if _, err := http.PostForm(fmt.Sprintf("http://localhost:%d%s", cliPort, conf.HttpBroadcastPath), url.Values{
 				conf.ParamMessage: {message},
