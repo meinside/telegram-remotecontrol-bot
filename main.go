@@ -312,7 +312,9 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				Keyboard:       allKeyboards,
 				ResizeKeyboard: true,
 			},
-			"parse_mode": bot.ParseModeMarkdown,
+		}
+		if checkMarkdownValidity(txt) {
+			options["parse_mode"] = bot.ParseModeMarkdown
 		}
 
 		switch session.CurrentStatus {
@@ -467,12 +469,15 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 	for _, chat := range chats {
 		if isAvailableId(chat.UserId) {
+			options := map[string]interface{}{}
+			if checkMarkdownValidity(message) {
+				options["parse_mode"] = bot.ParseModeMarkdown
+			}
 			if sent := client.SendMessage(
 				chat.ChatId,
 				&message,
-				map[string]interface{}{
-					"parse_mode": bot.ParseModeMarkdown,
-				}); !sent.Ok {
+				options,
+			); !sent.Ok {
 				log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
 
 				// log error to db
@@ -498,6 +503,18 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 
 		queue <- message
 	}
+}
+
+// check if given string is valid with markdown characters (true == valid)
+func checkMarkdownValidity(txt string) bool {
+	if strings.Count(txt, "_")%2 == 0 &&
+		strings.Count(txt, "*")%2 == 0 &&
+		strings.Count(txt, "`")%2 == 0 &&
+		strings.Count(txt, "```")%2 == 0 {
+		return true
+	}
+
+	return false
 }
 
 func main() {
