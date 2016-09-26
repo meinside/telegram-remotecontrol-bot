@@ -319,64 +319,76 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 
 		switch session.CurrentStatus {
 		case StatusWaiting:
-			switch {
-			// start
-			case strings.HasPrefix(txt, conf.CommandStart):
-				message = conf.MessageDefault
-			// systemctl
-			case strings.HasPrefix(txt, conf.CommandServiceStatus):
-				message, _ = services.Status(controllableServices)
-			case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
-				if len(controllableServices) > 0 {
+			if update.Message.Document != nil { // if a file is received,
+				fileResult := b.GetFile(update.Message.Document.FileId)
+				fileUrl := b.GetFileUrl(*fileResult.Result)
+
+				// XXX - only support: .torrent
+				if strings.HasSuffix(fileUrl, ".torrent") {
+					message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, fileUrl)
+				} else {
+					message = conf.MessageUnprocessableFileFormat
+				}
+			} else {
+				switch {
+				// start
+				case strings.HasPrefix(txt, conf.CommandStart):
+					message = conf.MessageDefault
+				// systemctl
+				case strings.HasPrefix(txt, conf.CommandServiceStatus):
+					message, _ = services.Status(controllableServices)
+				case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
+					if len(controllableServices) > 0 {
+						var keyboards [][]bot.InlineKeyboardButton
+						message, keyboards = parseServiceCommand(txt)
+
+						if keyboards != nil {
+							options["reply_markup"] = bot.InlineKeyboardMarkup{
+								InlineKeyboard: keyboards,
+							}
+						}
+					} else {
+						message = conf.MessageNoControllableServices
+					}
+				// transmission
+				case strings.HasPrefix(txt, conf.CommandTransmissionList):
+					message = transmission.GetList(rpcPort, rpcUsername, rpcPasswd)
+				case strings.HasPrefix(txt, conf.CommandTransmissionAdd):
+					message = conf.MessageTransmissionUpload
+					pool.Sessions[userId] = Session{
+						UserId:        userId,
+						CurrentStatus: StatusWaitingTransmissionUpload,
+					}
+					options["reply_markup"] = bot.ReplyKeyboardMarkup{
+						Keyboard:       cancelKeyboard,
+						ResizeKeyboard: true,
+					}
+				case strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete):
 					var keyboards [][]bot.InlineKeyboardButton
-					message, keyboards = parseServiceCommand(txt)
+					message, keyboards = parseTransmissionCommand(txt)
 
 					if keyboards != nil {
 						options["reply_markup"] = bot.InlineKeyboardMarkup{
 							InlineKeyboard: keyboards,
 						}
 					}
-				} else {
-					message = conf.MessageNoControllableServices
-				}
-			// transmission
-			case strings.HasPrefix(txt, conf.CommandTransmissionList):
-				message = transmission.GetList(rpcPort, rpcUsername, rpcPasswd)
-			case strings.HasPrefix(txt, conf.CommandTransmissionAdd):
-				message = conf.MessageTransmissionUpload
-				pool.Sessions[userId] = Session{
-					UserId:        userId,
-					CurrentStatus: StatusWaitingTransmissionUpload,
-				}
-				options["reply_markup"] = bot.ReplyKeyboardMarkup{
-					Keyboard:       cancelKeyboard,
-					ResizeKeyboard: true,
-				}
-			case strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete):
-				var keyboards [][]bot.InlineKeyboardButton
-				message, keyboards = parseTransmissionCommand(txt)
-
-				if keyboards != nil {
-					options["reply_markup"] = bot.InlineKeyboardMarkup{
-						InlineKeyboard: keyboards,
+				case strings.HasPrefix(txt, conf.CommandStatus):
+					message = getStatus()
+				case strings.HasPrefix(txt, conf.CommandLogs):
+					message = getLogs()
+				case strings.HasPrefix(txt, conf.CommandHelp):
+					message = getHelp()
+					options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
+						InlineKeyboard: [][]bot.InlineKeyboardButton{
+							bot.NewInlineKeyboardButtonsWithUrl(map[string]string{
+								"GitHub": GithubPageUrl,
+							}),
+						},
 					}
+				// fallback
+				default:
+					message = fmt.Sprintf("*%s*: %s", helper.RemoveMarkdownChars(txt, ""), conf.MessageUnknownCommand)
 				}
-			case strings.HasPrefix(txt, conf.CommandStatus):
-				message = getStatus()
-			case strings.HasPrefix(txt, conf.CommandLogs):
-				message = getLogs()
-			case strings.HasPrefix(txt, conf.CommandHelp):
-				message = getHelp()
-				options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
-					InlineKeyboard: [][]bot.InlineKeyboardButton{
-						bot.NewInlineKeyboardButtonsWithUrl(map[string]string{
-							"GitHub": GithubPageUrl,
-						}),
-					},
-				}
-			// fallback
-			default:
-				message = fmt.Sprintf("*%s*: %s", helper.RemoveMarkdownChars(txt, ""), conf.MessageUnknownCommand)
 			}
 		case StatusWaitingTransmissionUpload:
 			switch {
