@@ -143,28 +143,39 @@ func isControllableService(service string) bool {
 
 // for showing help message
 func getHelp() string {
-	return `
+	return fmt.Sprintf(`
 Following commands are supported:
 
 *For Transmission*
 
-/trlist : show torrent list
-/tradd : add torrent with url or magnet
-/trremove : remove torrent from list
-/trdelete : remove torrent and delete data
+%s : show torrent list
+%s : add torrent with url or magnet
+%s : remove torrent from list
+%s : remove torrent and delete data
 
 *For Systemctl*
 
-/servicestatus : show status of each service (systemctl is-active)
-/servicestart  : start a service (systemctl start)
-/servicestop   : stop a service (systemctl stop)
+%s : show status of each service (systemctl is-active)
+%s : start a service (systemctl start)
+%s : stop a service (systemctl stop)
 
 *Others*
 
-/status : show this bot's status
-/logs : show latest logs of this bot
-/help : show this help message
-`
+%s : show this bot's status
+%s : show latest logs of this bot
+%s : show this help message
+`,
+		conf.CommandTransmissionList,
+		conf.CommandTransmissionAdd,
+		conf.CommandTransmissionRemove,
+		conf.CommandTransmissionDelete,
+		conf.CommandServiceStatus,
+		conf.CommandServiceStart,
+		conf.CommandServiceStop,
+		conf.CommandStatus,
+		conf.CommandLogs,
+		conf.CommandHelp,
+	)
 }
 
 // get recent logs
@@ -224,6 +235,14 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 
 				keyboards = [][]bot.InlineKeyboardButton{
 					bot.NewInlineKeyboardButtonsWithCallbackData(keys),
+
+					// cancel button
+					[]bot.InlineKeyboardButton{
+						bot.InlineKeyboardButton{
+							Text:         conf.MessageCancel,
+							CallbackData: conf.CommandCancel,
+						},
+					},
 				}
 			}
 		}
@@ -260,6 +279,14 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 					}
 					keyboards = [][]bot.InlineKeyboardButton{
 						bot.NewInlineKeyboardButtonsWithCallbackData(keys),
+
+						// cancel button
+						[]bot.InlineKeyboardButton{
+							bot.InlineKeyboardButton{
+								Text:         conf.MessageCancel,
+								CallbackData: conf.CommandCancel,
+							},
+						},
 					}
 				}
 			}
@@ -312,9 +339,6 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				Keyboard:       allKeyboards,
 				ResizeKeyboard: true,
 			},
-		}
-		if checkMarkdownValidity(txt) {
-			options["parse_mode"] = bot.ParseModeMarkdown
 		}
 
 		switch session.CurrentStatus {
@@ -414,6 +438,9 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		}
 
 		// send message
+		if checkMarkdownValidity(message) {
+			options["parse_mode"] = bot.ParseModeMarkdown
+		}
 		if sent := b.SendMessage(update.Message.Chat.Id, &message, options); sent.Ok {
 			result = true
 		} else {
@@ -442,7 +469,9 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	result := false
 
 	var message string = ""
-	if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) { // service
+	if strings.HasPrefix(txt, conf.CommandCancel) {
+		message = ""
+	} else if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) { // service
 		message, _ = parseServiceCommand(txt)
 	} else if strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // transmission
 		message, _ = parseTransmissionCommand(txt)
@@ -450,28 +479,36 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 		log.Printf("*** Unprocessable callback query: %s\n", txt)
 
 		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
+
+		return result // == false
 	}
 
+	// answer callback query
+	options := map[string]interface{}{}
 	if len(message) > 0 {
-		// answer callback query
-		if apiResult := b.AnswerCallbackQuery(query.Id, map[string]interface{}{"text": message}); apiResult.Ok {
-			// edit message and remove inline keyboards
-			options := map[string]interface{}{
-				"chat_id":    query.Message.Chat.Id,
-				"message_id": query.Message.MessageId,
-			}
-			if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
-				result = true
-			} else {
-				log.Printf("*** Failed to edit message text: %s\n", *apiResult.Description)
-
-				db.LogError(fmt.Sprintf("failed to edit message text: %s", *apiResult.Description))
-			}
-		} else {
-			log.Printf("*** Failed to answer callback query: %+v\n", query)
-
-			db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
+		options["text"] = message
+	}
+	if apiResult := b.AnswerCallbackQuery(query.Id, options); apiResult.Ok {
+		// edit message and remove inline keyboards
+		options := map[string]interface{}{
+			"chat_id":    query.Message.Chat.Id,
+			"message_id": query.Message.MessageId,
 		}
+
+		if len(message) <= 0 {
+			message = conf.MessageCanceled
+		}
+		if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
+			result = true
+		} else {
+			log.Printf("*** Failed to edit message text: %s\n", *apiResult.Description)
+
+			db.LogError(fmt.Sprintf("failed to edit message text: %s", *apiResult.Description))
+		}
+	} else {
+		log.Printf("*** Failed to answer callback query: %+v\n", query)
+
+		db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
 	}
 
 	return result

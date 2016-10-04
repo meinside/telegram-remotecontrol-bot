@@ -138,7 +138,7 @@ func (d *Database) GetLogs(latestN int) []Log {
 	return logs
 }
 
-func (d *Database) SaveChat(chatId int, userId string) {
+func (d *Database) SaveChat(chatId int64, userId string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert or ignore into chats(chat_id, user_id) values(?, ?)`); err != nil {
