@@ -615,6 +615,9 @@ func main() {
 			client.StartMonitoringUpdates(0, monitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err == nil {
 					if update.HasMessage() {
+						// 'is typing...'
+						b.SendChatAction(update.Message.Chat.Id, bot.ChatActionTyping)
+
 						// process message
 						processUpdate(b, update)
 					} else if update.HasCallbackQuery() {
