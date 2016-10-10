@@ -7,6 +7,8 @@
 	],
 	"controllable_services": [
 	],
+	"mount_points": [
+	],
 	"monitor_interval": 3,
 	"transmission_rpc_port": 9091,
 	"transmission_rpc_username": "",

@@ -53,6 +53,7 @@ var monitorInterval int
 var isVerbose bool
 var availableIds []string
 var controllableServices []string
+var mountPoints []string
 var rpcPort int
 var rpcUsername, rpcPasswd string
 var pool SessionPool
@@ -89,6 +90,7 @@ func init() {
 		apiToken = config.ApiToken
 		availableIds = config.AvailableIds
 		controllableServices = config.ControllableServices
+		mountPoints = config.MountPoints
 		rpcPort = config.TransmissionRpcPort
 		if rpcPort <= 0 {
 			rpcPort = conf.DefaultTransmissionRpcPort
@@ -196,7 +198,7 @@ func getLogs() string {
 
 // for showing current status of this bot
 func getStatus() string {
-	return fmt.Sprintf("Uptime: %s\nMemory Usage: %s", helper.GetUptime(launched), helper.GetMemoryUsage())
+	return fmt.Sprintf("App Uptime: %s\nApp Memory Usage: %s\nSystem Disk Usage:\n%s", helper.GetUptime(launched), helper.GetMemoryUsage(), helper.GetDiskUsage(mountPoints))
 }
 
 // parse service command and start/stop given service

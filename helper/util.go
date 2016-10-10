@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -20,7 +21,8 @@ const (
 type Config struct {
 	ApiToken                string   `json:"api_token"`
 	AvailableIds            []string `json:"available_ids"`
-	ControllableServices    []string `json:"controllable_services"`
+	ControllableServices    []string `json:"controllable_services,omitempty"`
+	MountPoints             []string `json:"mount_points,omitempty"`
 	MonitorInterval         int      `json:"monitor_interval"`
 	TransmissionRpcPort     int      `json:"transmission_rpc_port,omitempty"`
 	TransmissionRpcUsername string   `json:"transmission_rpc_username,omitempty"`
@@ -63,6 +65,36 @@ func GetMemoryUsage() (usage string) {
 	runtime.ReadMemStats(m)
 
 	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
+}
+
+// get disk usage (https://gist.github.com/lunny/9828326)
+func GetDiskUsage(additionalPaths []string) (usage string) {
+	paths := []string{"/"}
+	for _, p := range additionalPaths {
+		paths = append(paths, p)
+	}
+
+	var lines []string
+	for _, p := range paths {
+		fs := syscall.Statfs_t{}
+		if err := syscall.Statfs(p, &fs); err == nil {
+			all := fs.Blocks * uint64(fs.Bsize)
+			free := fs.Bfree * uint64(fs.Bsize)
+			used := all - free
+
+			lines = append(lines, fmt.Sprintf(
+				"  %s  all *%.2f GB*, used *%.2f GB*, free *%.2f GB*",
+				p,
+				float64(all)/1024/1024/1024,
+				float64(used)/1024/1024/1024,
+				float64(free)/1024/1024/1024,
+			))
+		} else {
+			lines = append(lines, fmt.Sprintf("%s: %s", p, err))
+		}
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 // XXX - remove markdown characters for avoiding
