@@ -64,7 +64,7 @@ func GetMemoryUsage() (usage string) {
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
 
-	return fmt.Sprintf("Sys: *%.1f MB*, Heap: *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
+	return fmt.Sprintf("Sys *%.1f MB*, Heap *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
 }
 
 // get disk usage (https://gist.github.com/lunny/9828326)
