@@ -279,17 +279,15 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 					for _, t := range torrents {
 						keys[fmt.Sprintf("%d. %s", t.Id, t.Name)] = fmt.Sprintf("%s %d", cmd, t.Id)
 					}
-					keyboards = [][]bot.InlineKeyboardButton{
-						bot.NewInlineKeyboardButtonsWithCallbackData(keys),
+					keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
 
-						// cancel button
-						[]bot.InlineKeyboardButton{
-							bot.InlineKeyboardButton{
-								Text:         conf.MessageCancel,
-								CallbackData: conf.CommandCancel,
-							},
+					// cancel button
+					keyboards = append(keyboards, []bot.InlineKeyboardButton{
+						bot.InlineKeyboardButton{
+							Text:         conf.MessageCancel,
+							CallbackData: conf.CommandCancel,
 						},
-					}
+					})
 				}
 			}
 			continue
