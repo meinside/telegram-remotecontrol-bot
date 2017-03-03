@@ -10,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/meinside/rpi-tools"
 )
 
 const (
@@ -61,10 +63,9 @@ func GetUptime(launched time.Time) (uptime string) {
 
 // get memory usage
 func GetMemoryUsage() (usage string) {
-	m := new(runtime.MemStats)
-	runtime.ReadMemStats(m)
+	sys, heap := tools.MemoryUsage()
 
-	return fmt.Sprintf("Sys *%.1f MB*, Heap *%.1f MB*", float32(m.Sys)/1024/1024, float32(m.HeapAlloc)/1024/1024)
+	return fmt.Sprintf("Sys *%.1f MB*, Heap *%.1f MB*", float32(sys)/1024/1024, float32(heap)/1024/1024)
 }
 
 // get disk usage (https://gist.github.com/lunny/9828326)
