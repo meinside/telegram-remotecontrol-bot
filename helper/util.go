@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/meinside/rpi-tools"
+	"github.com/meinside/rpi-tools/status"
 )
 
 const (
@@ -63,7 +63,7 @@ func GetUptime(launched time.Time) (uptime string) {
 
 // get memory usage
 func GetMemoryUsage() (usage string) {
-	sys, heap := tools.MemoryUsage()
+	sys, heap := status.MemoryUsage()
 
 	return fmt.Sprintf("Sys *%.1f MB*, Heap *%.1f MB*", float32(sys)/1024/1024, float32(heap)/1024/1024)
 }

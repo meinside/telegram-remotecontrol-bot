@@ -15,11 +15,11 @@ import (
 
 	"github.com/pkg/profile"
 
+	svc "github.com/meinside/rpi-tools/service"
 	bot "github.com/meinside/telegram-bot-go"
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
 	"github.com/meinside/telegram-bot-remotecontrol/helper"
-	"github.com/meinside/telegram-bot-remotecontrol/helper/services"
 	"github.com/meinside/telegram-bot-remotecontrol/helper/services/transmission"
 )
 
@@ -211,13 +211,13 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 
 			if isControllableService(service) {
 				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
-					if output, ok := services.Start(service); ok {
+					if output, ok := svc.SystemctlStart(service); ok {
 						message = fmt.Sprintf("Started service: %s", service)
 					} else {
 						message = output
 					}
 				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
-					if output, ok := services.Stop(service); ok {
+					if output, ok := svc.SystemctlStop(service); ok {
 						message = fmt.Sprintf("Stopped service: %s", service)
 					} else {
 						message = output
@@ -360,7 +360,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					message = conf.MessageDefault
 				// systemctl
 				case strings.HasPrefix(txt, conf.CommandServiceStatus):
-					message, _ = services.Status(controllableServices)
+					statuses, _ := svc.SystemctlStatus(controllableServices)
+					for service, status := range statuses {
+						message += fmt.Sprintf("%s: *%s*\n", service, status)
+					}
 				case strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop):
 					if len(controllableServices) > 0 {
 						var keyboards [][]bot.InlineKeyboardButton
