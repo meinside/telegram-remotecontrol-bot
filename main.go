@@ -15,7 +15,6 @@ import (
 
 	"github.com/pkg/profile"
 
-	svc "github.com/meinside/rpi-tools/service"
 	bot "github.com/meinside/telegram-bot-go"
 
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
@@ -211,16 +210,20 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 
 			if isControllableService(service) {
 				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
-					if output, ok := svc.SystemctlStart(service); ok {
+					if output, err := helper.SystemctlStart(service); err == nil {
 						message = fmt.Sprintf("Started service: %s", service)
 					} else {
-						message = output
+						message = fmt.Sprintf("Failed to start service: %s (%s)", service, err)
+
+						db.LogError(fmt.Sprintf("service start failed: %s", output))
 					}
 				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
-					if output, ok := svc.SystemctlStop(service); ok {
+					if output, err := helper.SystemctlStop(service); err == nil {
 						message = fmt.Sprintf("Stopped service: %s", service)
 					} else {
-						message = output
+						message = fmt.Sprintf("Failed to stop service: %s (%s)", service, err)
+
+						db.LogError(fmt.Sprintf("service stop failed: %s", output))
 					}
 				}
 			} else {
@@ -235,17 +238,13 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 					keys[v] = fmt.Sprintf("%s %s", cmd, v)
 				}
 
-				keyboards = [][]bot.InlineKeyboardButton{
-					bot.NewInlineKeyboardButtonsWithCallbackData(keys),
-
-					// cancel button
-					[]bot.InlineKeyboardButton{
-						bot.InlineKeyboardButton{
-							Text:         conf.MessageCancel,
-							CallbackData: conf.CommandCancel,
-						},
+				keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
+				keyboards = append(keyboards, []bot.InlineKeyboardButton{ // cancel button
+					bot.InlineKeyboardButton{
+						Text:         conf.MessageCancel,
+						CallbackData: conf.CommandCancel,
 					},
-				}
+				})
 			}
 		}
 		continue
@@ -360,7 +359,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					message = conf.MessageDefault
 				// systemctl
 				case strings.HasPrefix(txt, conf.CommandServiceStatus):
-					statuses, _ := svc.SystemctlStatus(controllableServices)
+					statuses, _ := helper.SystemctlStatus(controllableServices)
 					for service, status := range statuses {
 						message += fmt.Sprintf("%s: *%s*\n", service, status)
 					}

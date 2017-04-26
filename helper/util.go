@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -106,4 +107,44 @@ func RemoveMarkdownChars(original, replaceWith string) string {
 	removed = strings.Replace(removed, "_", replaceWith, -1)
 	removed = strings.Replace(removed, "`", replaceWith, -1)
 	return removed
+}
+
+// Sudo run given command with parameters and return combined output
+func sudoRunCmd(cmdAndParams []string) (string, error) {
+	if len(cmdAndParams) < 1 {
+		return "", fmt.Errorf("No command provided")
+	}
+
+	output, err := exec.Command("sudo", cmdAndParams...).CombinedOutput()
+	return strings.TrimRight(string(output), "\n"), err
+}
+
+// Run `systemctl status is-active`
+func SystemctlStatus(services []string) (statuses map[string]string, success bool) {
+	statuses = make(map[string]string)
+
+	args := []string{"systemctl", "is-active"}
+	args = append(args, services...)
+
+	output, _ := sudoRunCmd(args)
+	for i, status := range strings.Split(output, "\n") {
+		statuses[services[i]] = status
+	}
+
+	return statuses, true
+}
+
+// Run `systemctl start [service]`
+func SystemctlStart(service string) (message string, err error) {
+	return sudoRunCmd([]string{"systemctl", "start", service})
+}
+
+// Run `systemctl stop [service]`
+func SystemctlStop(service string) (message string, err error) {
+	return sudoRunCmd([]string{"systemctl", "stop", service})
+}
+
+// Run `systemctl restart [service]`
+func SystemctlRestart(service string) (message string, err error) {
+	return sudoRunCmd([]string{"systemctl", "restart", service})
 }
