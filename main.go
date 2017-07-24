@@ -237,12 +237,14 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 				for _, v := range controllableServices {
 					keys[v] = fmt.Sprintf("%s %s", cmd, v)
 				}
-
 				keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
-				keyboards = append(keyboards, []bot.InlineKeyboardButton{ // cancel button
+
+				// add cancel button
+				cancel := conf.CommandCancel
+				keyboards = append(keyboards, []bot.InlineKeyboardButton{
 					bot.InlineKeyboardButton{
 						Text:         conf.MessageCancel,
-						CallbackData: conf.CommandCancel,
+						CallbackData: &cancel,
 					},
 				})
 			}
@@ -280,11 +282,12 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 					}
 					keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
 
-					// cancel button
+					// add cancel button
+					cancel := conf.CommandCancel
 					keyboards = append(keyboards, []bot.InlineKeyboardButton{
 						bot.InlineKeyboardButton{
 							Text:         conf.MessageCancel,
-							CallbackData: conf.CommandCancel,
+							CallbackData: &cancel,
 						},
 					})
 				}
@@ -303,12 +306,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
 	if update.Message.From.Username == nil {
-		log.Printf("*** Not allowed (no user name): %s\n", *update.Message.From.FirstName)
+		log.Printf("*** Not allowed, or has no username: %s", update.Message.From.FirstName)
 		return false
 	}
 	userId = *update.Message.From.Username
 	if !isAvailableId(userId) {
-		log.Printf("*** Id not allowed: %s\n", userId)
+		log.Printf("*** Id not allowed: %s", userId)
 
 		// log error to db
 		db.LogError(fmt.Sprintf("not allowed id: %s", userId))
@@ -443,16 +446,16 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		if checkMarkdownValidity(message) {
 			options["parse_mode"] = bot.ParseModeMarkdown
 		}
-		if sent := b.SendMessage(update.Message.Chat.Id, &message, options); sent.Ok {
+		if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
 			result = true
 		} else {
-			log.Printf("*** Failed to send message: %s\n", *sent.Description)
+			log.Printf("*** Failed to send message: %s", *sent.Description)
 
 			// log error to db
 			db.LogError(*sent.Description)
 		}
 	} else {
-		log.Printf("*** Session does not exist for id: %s\n", userId)
+		log.Printf("*** Session does not exist for id: %s", userId)
 
 		// log error to db
 		db.LogError(fmt.Sprintf("no session for id: %s", userId))
@@ -478,7 +481,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	} else if strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // transmission
 		message, _ = parseTransmissionCommand(txt)
 	} else {
-		log.Printf("*** Unprocessable callback query: %s\n", txt)
+		log.Printf("*** Unprocessable callback query: %s", txt)
 
 		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
 
@@ -500,15 +503,15 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 		if len(message) <= 0 {
 			message = conf.MessageCanceled
 		}
-		if apiResult := b.EditMessageText(&message, options); apiResult.Ok {
+		if apiResult := b.EditMessageText(message, options); apiResult.Ok {
 			result = true
 		} else {
-			log.Printf("*** Failed to edit message text: %s\n", *apiResult.Description)
+			log.Printf("*** Failed to edit message text: %s", *apiResult.Description)
 
 			db.LogError(fmt.Sprintf("failed to edit message text: %s", *apiResult.Description))
 		}
 	} else {
-		log.Printf("*** Failed to answer callback query: %+v\n", query)
+		log.Printf("*** Failed to answer callback query: %+v", query)
 
 		db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
 	}
@@ -526,16 +529,16 @@ func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 			}
 			if sent := client.SendMessage(
 				chat.ChatId,
-				&message,
+				message,
 				options,
 			); !sent.Ok {
-				log.Printf("*** Failed to broadcast to chat id %d: %s\n", chat.ChatId, *sent.Description)
+				log.Printf("*** Failed to broadcast to chat id %d: %s", chat.ChatId, *sent.Description)
 
 				// log error to db
 				db.LogError(*sent.Description)
 			}
 		} else {
-			log.Printf("*** Id not allowed for broadcasting: %s\n", chat.UserId)
+			log.Printf("*** Id not allowed for broadcasting: %s", chat.UserId)
 
 			// log error to db
 			db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
@@ -549,7 +552,7 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 
 	if len(message) > 0 {
 		if isVerbose {
-			log.Printf("Received message from CLI: %s\n", message)
+			log.Printf("Received message from CLI: %s", message)
 		}
 
 		queue <- message
@@ -585,7 +588,7 @@ func main() {
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
-		log.Printf("Launching bot: @%s (%s)\n", *me.Result.Username, *me.Result.FirstName)
+		log.Printf("Launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
@@ -605,7 +608,7 @@ func main() {
 				if cliPort <= 0 {
 					cliPort = conf.DefaultCliPortNumber
 				}
-				log.Printf("Starting local web server for CLI on port: %d\n", cliPort)
+				log.Printf("Starting local web server for CLI on port: %d", cliPort)
 
 				http.HandleFunc(conf.HttpBroadcastPath, httpHandler)
 				if err := http.ListenAndServe(fmt.Sprintf(":%d", cliPort), nil); err != nil {
@@ -627,7 +630,7 @@ func main() {
 						processCallbackQuery(b, update)
 					}
 				} else {
-					log.Printf("*** Error while receiving update (%s)\n", err)
+					log.Printf("*** Error while receiving update (%s)", err)
 				}
 			})
 		} else {
