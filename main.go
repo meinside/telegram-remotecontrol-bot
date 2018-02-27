@@ -416,7 +416,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					}
 				// fallback
 				default:
-					message = fmt.Sprintf("*%s*: %s", helper.RemoveMarkdownChars(txt, ""), conf.MessageUnknownCommand)
+					cmd := helper.RemoveMarkdownChars(txt, "")
+					if len(cmd) > 0 {
+						message = fmt.Sprintf("*%s*: %s", cmd, conf.MessageUnknownCommand)
+					} else {
+						message = conf.MessageUnknownCommand
+					}
 				}
 			}
 		case StatusWaitingTransmissionUpload:
