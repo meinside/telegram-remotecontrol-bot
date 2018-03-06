@@ -158,6 +158,8 @@ func GetList(port int, username, passwd string) string {
 					strs[i] = fmt.Sprintf("%d. _%s_ (total %s, *%.2f%%*)", t.Id, helper.RemoveMarkdownChars(t.Name, " "), readableSize(t.TotalSize), t.PercentDone*100.0)
 				}
 			}
+			strs = append(strs, "--")
+			strs = append(strs, fmt.Sprintf("Total %d torrent(s)", numTorrents))
 			return strings.Join(strs, "\n")
 		} else {
 			return conf.MessageTransmissionNoTorrents
