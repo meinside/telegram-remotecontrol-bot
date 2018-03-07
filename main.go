@@ -336,12 +336,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		}
 
 		var message string
-		var options map[string]interface{} = map[string]interface{}{
-			"reply_markup": bot.ReplyKeyboardMarkup{
-				Keyboard:       allKeyboards,
-				ResizeKeyboard: true,
-			},
-		}
+		var options map[string]interface{} = defaultOptions()
 
 		switch session.CurrentStatus {
 		case StatusWaiting:
@@ -528,7 +523,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 	for _, chat := range chats {
 		if isAvailableId(chat.UserId) {
-			options := map[string]interface{}{}
+			options := defaultOptions()
 			if checkMarkdownValidity(message) {
 				options["parse_mode"] = bot.ParseModeMarkdown
 			}
@@ -574,6 +569,16 @@ func checkMarkdownValidity(txt string) bool {
 	}
 
 	return false
+}
+
+// default options for messages
+func defaultOptions() map[string]interface{} {
+	return map[string]interface{}{
+		"reply_markup": bot.ReplyKeyboardMarkup{
+			Keyboard:       allKeyboards,
+			ResizeKeyboard: true,
+		},
+	}
 }
 
 func main() {
