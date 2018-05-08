@@ -23,10 +23,10 @@ import (
 )
 
 const (
-	//DoProfiling = true
-	DoProfiling = false
+	//doProfiling = true
+	doProfiling = false
 
-	GithubPageUrl = "https://github.com/meinside/telegram-bot-remotecontrol"
+	githubPageUrl = "https://github.com/meinside/telegram-bot-remotecontrol"
 )
 
 type Status int16
@@ -76,7 +76,7 @@ func init() {
 	launched = time.Now()
 
 	// for profiling
-	if DoProfiling {
+	if doProfiling {
 		defer profile.Start(
 			profile.BlockProfile,
 			profile.CPUProfile,
@@ -320,7 +320,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	}
 
 	// save chat id
-	db.SaveChat(update.Message.Chat.Id, userId)
+	db.SaveChat(update.Message.Chat.ID, userId)
 
 	// process result
 	result := false
@@ -341,8 +341,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		switch session.CurrentStatus {
 		case StatusWaiting:
 			if update.Message.Document != nil { // if a file is received,
-				fileResult := b.GetFile(update.Message.Document.FileId)
-				fileUrl := b.GetFileUrl(*fileResult.Result)
+				fileResult := b.GetFile(update.Message.Document.FileID)
+				fileUrl := b.GetFileURL(*fileResult.Result)
 
 				// XXX - only support: .torrent
 				if strings.HasSuffix(fileUrl, ".torrent") {
@@ -404,8 +404,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					message = getHelp()
 					options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
 						InlineKeyboard: [][]bot.InlineKeyboardButton{
-							bot.NewInlineKeyboardButtonsWithUrl(map[string]string{
-								"GitHub": GithubPageUrl,
+							bot.NewInlineKeyboardButtonsWithURL(map[string]string{
+								"GitHub": githubPageUrl,
 							}),
 						},
 					}
@@ -426,8 +426,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			default:
 				var torrent string
 				if update.Message.Document != nil {
-					fileResult := b.GetFile(update.Message.Document.FileId)
-					torrent = b.GetFileUrl(*fileResult.Result)
+					fileResult := b.GetFile(update.Message.Document.FileID)
+					torrent = b.GetFileURL(*fileResult.Result)
 				} else {
 					torrent = txt
 				}
@@ -446,7 +446,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		if checkMarkdownValidity(message) {
 			options["parse_mode"] = bot.ParseModeMarkdown
 		}
-		if sent := b.SendMessage(update.Message.Chat.Id, message, options); sent.Ok {
+		if sent := b.SendMessage(update.Message.Chat.ID, message, options); sent.Ok {
 			result = true
 		} else {
 			log.Printf("*** Failed to send message: %s", *sent.Description)
@@ -493,11 +493,11 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	if len(message) > 0 {
 		options["text"] = message
 	}
-	if apiResult := b.AnswerCallbackQuery(query.Id, options); apiResult.Ok {
+	if apiResult := b.AnswerCallbackQuery(query.ID, options); apiResult.Ok {
 		// edit message and remove inline keyboards
 		options := map[string]interface{}{
-			"chat_id":    query.Message.Chat.Id,
-			"message_id": query.Message.MessageId,
+			"chat_id":    query.Message.Chat.ID,
+			"message_id": query.Message.MessageID,
 		}
 
 		if len(message) <= 0 {
@@ -631,7 +631,7 @@ func main() {
 				if err == nil {
 					if update.HasMessage() {
 						// 'is typing...'
-						b.SendChatAction(update.Message.Chat.Id, bot.ChatActionTyping)
+						b.SendChatAction(update.Message.Chat.ID, bot.ChatActionTyping)
 
 						// process message
 						processUpdate(b, update)
