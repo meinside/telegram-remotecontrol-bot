@@ -1,0 +1,6 @@
+github.com/mattn/go-sqlite3 v1.9.0 h1:pDRiWfl+++eC2FEFRy6jXmQlvp4Yh3z1MJKg4UeYM/4=
+github.com/mattn/go-sqlite3 v1.9.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
+github.com/meinside/rpi-tools v0.1.0 h1:0ImgtwSf457M42ZBlhOZiZ19WlzjyyL+nTlclYHdAr4=
+github.com/meinside/rpi-tools v0.1.0/go.mod h1:4p9tXh1Om0VIxADfedma+2E64gV+/gYwEjlk+2Dcb8U=
+github.com/meinside/telegram-bot-go v0.0.2 h1:yAAYhyWOhpOhZw5vJKgHc/wuj5sLa/uSliT+z1ipgnU=
+github.com/meinside/telegram-bot-go v0.0.2/go.mod h1:0fDch0mdkOg96AxEZnFWTn6Q46tpfuMExAGZiomYucg=
