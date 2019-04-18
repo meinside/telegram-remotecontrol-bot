@@ -2,19 +2,19 @@ package helper
 
 import (
 	"log"
-	"path"
+	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 
 	"database/sql"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
 	// constants for local database
-	DbFilename = "../db.sqlite"
+	DbFilename = "db.sqlite"
 )
 
 type Database struct {
@@ -38,34 +38,36 @@ var _db *Database = nil
 
 func OpenDb() *Database {
 	if _db == nil {
-		_, filename, _, _ := runtime.Caller(0) // = __FILE__
-
-		if db, err := sql.Open("sqlite3", filepath.Join(path.Dir(filename), DbFilename)); err != nil {
-			panic("Failed to open database: " + err.Error())
+		if execFilepath, err := os.Executable(); err != nil {
+			panic(err)
 		} else {
-			_db = &Database{
-				db: db,
-			}
+			if db, err := sql.Open("sqlite3", filepath.Join(filepath.Dir(execFilepath), DbFilename)); err != nil {
+				panic("Failed to open database: " + err.Error())
+			} else {
+				_db = &Database{
+					db: db,
+				}
 
-			// logs table
-			if _, err := db.Exec(`create table if not exists logs(
-				id integer primary key autoincrement,
-				type text default null,
-				message text not null,
-				time datetime default current_timestamp
-			)`); err != nil {
-				panic("Failed to create logs table: " + err.Error())
-			}
+				// logs table
+				if _, err := db.Exec(`create table if not exists logs(
+					id integer primary key autoincrement,
+					type text default null,
+					message text not null,
+					time datetime default current_timestamp
+				)`); err != nil {
+					panic("Failed to create logs table: " + err.Error())
+				}
 
-			// chats table
-			if _, err := db.Exec(`create table if not exists chats(
-				id integer primary key autoincrement,
-				chat_id integer not null,
-				user_id text not null,
-				create_time datetime default current_timestamp,
-				unique(chat_id)
-			)`); err != nil {
-				panic("Failed to create chats table: " + err.Error())
+				// chats table
+				if _, err := db.Exec(`create table if not exists chats(
+					id integer primary key autoincrement,
+					chat_id integer not null,
+					user_id text not null,
+					create_time datetime default current_timestamp,
+					unique(chat_id)
+				)`); err != nil {
+					panic("Failed to create chats table: " + err.Error())
+				}
 			}
 		}
 	}
