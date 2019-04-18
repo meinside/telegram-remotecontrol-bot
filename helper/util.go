@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -17,7 +16,7 @@ import (
 
 const (
 	// constants for config
-	ConfigFilename = "../config.json"
+	ConfigFilename = "config.json"
 )
 
 // struct for config file
@@ -36,18 +35,18 @@ type Config struct {
 
 // Read config
 func GetConfig() (config Config, err error) {
-	_, filename, _, _ := runtime.Caller(0) // = __FILE__
-
-	if file, err := ioutil.ReadFile(filepath.Join(path.Dir(filename), ConfigFilename)); err == nil {
-		var conf Config
-		if err := json.Unmarshal(file, &conf); err == nil {
-			return conf, nil
-		} else {
-			return Config{}, err
+	var execFilepath string
+	if execFilepath, err = os.Executable(); err == nil {
+		var file []byte
+		if file, err = ioutil.ReadFile(filepath.Join(filepath.Dir(execFilepath), ConfigFilename)); err == nil {
+			var conf Config
+			if err = json.Unmarshal(file, &conf); err == nil {
+				return conf, nil
+			}
 		}
-	} else {
-		return Config{}, err
 	}
+
+	return Config{}, err
 }
 
 // get uptime of this bot in seconds
