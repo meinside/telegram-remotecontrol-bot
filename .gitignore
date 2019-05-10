@@ -4,3 +4,4 @@ db.sqlite*
 config.json
 
 telegram-bot-remotecontrol
+cmd/telegram-bot-broadcast/telegram-bot-broadcast
