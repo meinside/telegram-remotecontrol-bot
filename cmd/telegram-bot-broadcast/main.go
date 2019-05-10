@@ -31,7 +31,7 @@ func main() {
 				cliPort = conf.DefaultCliPortNumber
 			}
 		} else {
-			fmt.Printf("failed to load config, using default port number: %d (%s)", conf.DefaultCliPortNumber, err)
+			fmt.Printf("failed to load config, using default port number: %d (%s)\n", conf.DefaultCliPortNumber, err)
 
 			cliPort = conf.DefaultCliPortNumber
 		}
@@ -41,7 +41,7 @@ func main() {
 		if _, err := http.PostForm(fmt.Sprintf("http://localhost:%d%s", cliPort, conf.HttpBroadcastPath), url.Values{
 			conf.ParamMessage: {message},
 		}); err != nil {
-			fmt.Println(fmt.Errorf("*** %s", err))
+			fmt.Printf("*** %s\n", err)
 		}
 	} else {
 		printUsage()
