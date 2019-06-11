@@ -66,6 +66,9 @@ var cancelKeyboard = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(conf.CommandCancel),
 }
 
+var _stdout = log.New(os.Stdout, "", log.LstdFlags)
+var _stderr = log.New(os.Stderr, "", log.LstdFlags)
+
 // initialization
 func init() {
 	launched = time.Now()
@@ -292,12 +295,12 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
 	var userId string
 	if update.Message.From.Username == nil {
-		log.Printf("*** Not allowed, or has no username: %s", update.Message.From.FirstName)
+		_stderr.Printf("not allowed, or has no username: %s", update.Message.From.FirstName)
 		return false
 	}
 	userId = *update.Message.From.Username
 	if !isAvailableId(userId) {
-		log.Printf("*** Id not allowed: %s", userId)
+		_stderr.Printf("id not allowed: %s", userId)
 
 		// log error to db
 		db.LogError(fmt.Sprintf("not allowed id: %s", userId))
@@ -435,13 +438,13 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		if sent := b.SendMessage(update.Message.Chat.ID, message, options); sent.Ok {
 			result = true
 		} else {
-			log.Printf("*** Failed to send message: %s", *sent.Description)
+			_stderr.Printf("failed to send message: %s", *sent.Description)
 
 			// log error to db
 			db.LogError(*sent.Description)
 		}
 	} else {
-		log.Printf("*** Session does not exist for id: %s", userId)
+		_stderr.Printf("session does not exist for id: %s", userId)
 
 		// log error to db
 		db.LogError(fmt.Sprintf("no session for id: %s", userId))
@@ -467,7 +470,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	} else if strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete) { // transmission
 		message, _ = parseTransmissionCommand(txt)
 	} else {
-		log.Printf("*** Unprocessable callback query: %s", txt)
+		_stderr.Printf("unprocessable callback query: %s", txt)
 
 		db.LogError(fmt.Sprintf("unprocessable callback query: %s", txt))
 
@@ -492,12 +495,12 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 		if apiResult := b.EditMessageText(message, options); apiResult.Ok {
 			result = true
 		} else {
-			log.Printf("*** Failed to edit message text: %s", *apiResult.Description)
+			_stderr.Printf("failed to edit message text: %s", *apiResult.Description)
 
 			db.LogError(fmt.Sprintf("failed to edit message text: %s", *apiResult.Description))
 		}
 	} else {
-		log.Printf("*** Failed to answer callback query: %+v", query)
+		_stderr.Printf("failed to answer callback query: %+v", query)
 
 		db.LogError(fmt.Sprintf("failed to answer callback query: %+v", query))
 	}
@@ -518,13 +521,13 @@ func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 				message,
 				options,
 			); !sent.Ok {
-				log.Printf("*** Failed to broadcast to chat id %d: %s", chat.ChatId, *sent.Description)
+				_stderr.Printf("failed to broadcast to chat id %d: %s", chat.ChatId, *sent.Description)
 
 				// log error to db
 				db.LogError(*sent.Description)
 			}
 		} else {
-			log.Printf("*** Id not allowed for broadcasting: %s", chat.UserId)
+			_stderr.Printf("id not allowed for broadcasting: %s", chat.UserId)
 
 			// log error to db
 			db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
@@ -538,7 +541,7 @@ var httpHandler = func(w http.ResponseWriter, r *http.Request) {
 
 	if len(message) > 0 {
 		if isVerbose {
-			log.Printf("Received message from CLI: %s", message)
+			_stdout.Printf("received message from CLI: %s", message)
 		}
 
 		queue <- message
@@ -584,7 +587,7 @@ func main() {
 
 	// get info about this bot
 	if me := client.GetMe(); me.Ok {
-		log.Printf("Launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
+		_stdout.Printf("launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		if unhooked := client.DeleteWebhook(); unhooked.Ok {
@@ -604,7 +607,7 @@ func main() {
 				if cliPort <= 0 {
 					cliPort = conf.DefaultCliPortNumber
 				}
-				log.Printf("Starting local web server for CLI on port: %d", cliPort)
+				_stdout.Printf("starting local web server for CLI on port: %d", cliPort)
 
 				http.HandleFunc(conf.HttpBroadcastPath, httpHandler)
 				if err := http.ListenAndServe(fmt.Sprintf(":%d", cliPort), nil); err != nil {
@@ -626,7 +629,7 @@ func main() {
 						processCallbackQuery(b, update)
 					}
 				} else {
-					log.Printf("*** Error while receiving update (%s)", err)
+					_stderr.Printf("error while receiving update (%s)", err)
 				}
 			})
 		} else {
