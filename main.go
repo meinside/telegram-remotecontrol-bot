@@ -367,14 +367,19 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				case strings.HasPrefix(txt, conf.CommandTransmissionList):
 					message = transmission.GetList(rpcPort, rpcUsername, rpcPasswd)
 				case strings.HasPrefix(txt, conf.CommandTransmissionAdd):
-					message = conf.MessageTransmissionUpload
-					pool.Sessions[userId] = Session{
-						UserId:        userId,
-						CurrentStatus: StatusWaitingTransmissionUpload,
-					}
-					options["reply_markup"] = bot.ReplyKeyboardMarkup{
-						Keyboard:       cancelKeyboard,
-						ResizeKeyboard: true,
+					arg := strings.TrimSpace(strings.Replace(txt, conf.CommandTransmissionAdd, "", 1))
+					if strings.HasPrefix(arg, "magnet:") {
+						message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, arg)
+					} else {
+						message = conf.MessageTransmissionUpload
+						pool.Sessions[userId] = Session{
+							UserId:        userId,
+							CurrentStatus: StatusWaitingTransmissionUpload,
+						}
+						options["reply_markup"] = bot.ReplyKeyboardMarkup{
+							Keyboard:       cancelKeyboard,
+							ResizeKeyboard: true,
+						}
 					}
 				case strings.HasPrefix(txt, conf.CommandTransmissionRemove) || strings.HasPrefix(txt, conf.CommandTransmissionDelete):
 					var keyboards [][]bot.InlineKeyboardButton
