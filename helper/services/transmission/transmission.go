@@ -70,7 +70,7 @@ func getLocalTransmissionRpcUrl(port int, username, passwd string) string {
 // https://trac.transmissionbt.com/browser/trunk/extras/rpc-spec.txt
 func post(port int, username, passwd string, request transmissionRpcRequest, numRetriesLeft int) (res []byte, err error) {
 	if numRetriesLeft <= 0 {
-		return res, fmt.Errorf("No more retries for this request: %v", request)
+		return res, fmt.Errorf("no more retries for this request: %v", request)
 	}
 
 	var data []byte
@@ -92,9 +92,9 @@ func post(port int, username, passwd string, request transmissionRpcRequest, num
 
 						return post(port, username, passwd, request, numRetriesLeft-1) // XXX - retry
 					} else {
-						err = fmt.Errorf("Could not find '%s' value from http headers", httpHeaderXTransmissionSessionId)
+						err = fmt.Errorf("could not find '%s' value from http headers", httpHeaderXTransmissionSessionId)
 
-						log.Printf("Error in RPC server: %s\n", err.Error())
+						log.Printf("error in RPC server: %s\n", err.Error())
 					}
 				}
 
@@ -103,21 +103,21 @@ func post(port int, username, passwd string, request transmissionRpcRequest, num
 				if resp.StatusCode != http.StatusOK {
 					err = fmt.Errorf("HTTP %d (%s)", resp.StatusCode, string(res))
 
-					log.Printf("Error from RPC server: %s\n", err.Error())
+					log.Printf("error from RPC server: %s\n", err.Error())
 				} /* else {
 					// XXX - for debugging
 					log.Printf("returned json = %s\n", string(res))
 				}*/
 			} else {
-				log.Printf("Error while sending request: %s\n", err.Error())
+				log.Printf("error while sending request: %s\n", err.Error())
 
 				return post(port, username, passwd, request, numRetriesLeft-1) // XXX - retry
 			}
 		} else {
-			log.Printf("Error while building request: %s\n", err.Error())
+			log.Printf("error while building request: %s\n", err.Error())
 		}
 	} else {
-		log.Printf("Error while marshaling data: %s\n", err.Error())
+		log.Printf("error while marshaling data: %s\n", err.Error())
 	}
 
 	return res, err
@@ -138,7 +138,7 @@ func GetTorrents(port int, username, passwd string) (torrents []transmissionRpcR
 			if result.Result == "success" {
 				torrents = result.Arguments.Torrents
 			} else {
-				err = fmt.Errorf("Failed to list torrents.")
+				err = fmt.Errorf("failed to list torrents")
 			}
 		}
 	}
@@ -182,18 +182,18 @@ func AddTorrent(port int, username, passwd, torrent string) string {
 		if err := json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
 				if result.Arguments.TorrentDuplicate != nil {
-					return "Duplicated torrent was given."
+					return "duplicated torrent was given"
 				} else {
-					return "Given torrent was successfully added to the list."
+					return "given torrent was successfully added to the list"
 				}
 			} else {
-				return fmt.Sprintf("Failed to add given torrent")
+				return fmt.Sprintf("failed to add given torrent")
 			}
 		} else {
-			return fmt.Sprintf("Malformed RPC server response: %s", string(output))
+			return fmt.Sprintf("malformed RPC server response: %s", string(output))
 		}
 	} else {
-		return fmt.Sprintf("Failed to add given torrent - %s", string(output))
+		return fmt.Sprintf("failed to add given torrent: %s", string(output))
 	}
 }
 
@@ -211,21 +211,21 @@ func removeTorrent(port int, username, passwd, torrentId string, deleteLocal boo
 			if err := json.Unmarshal(output, &result); err == nil {
 				if result.Result == "success" {
 					if deleteLocal {
-						return fmt.Sprintf("Torrent id %s and its data were successfully deleted.", torrentId)
+						return fmt.Sprintf("torrent id: %s and its data were successfully deleted", torrentId)
 					} else {
-						return fmt.Sprintf("Torrent id %s was successfully removed from the list.", torrentId)
+						return fmt.Sprintf("torrent id: %s was successfully removed from the list", torrentId)
 					}
 				} else {
-					return fmt.Sprintf("Failed to remove given torrent")
+					return fmt.Sprintf("failed to remove given torrent")
 				}
 			} else {
-				return fmt.Sprintf("Malformed RPC server response: %s", string(output))
+				return fmt.Sprintf("malformed RPC server response: %s", string(output))
 			}
 		} else {
-			return fmt.Sprintf("Failed to remove given torrent - %s", err.Error())
+			return fmt.Sprintf("failed to remove given torrent: %s", err.Error())
 		}
 	} else {
-		return fmt.Sprintf("Not a valid torrent id: ", torrentId)
+		return fmt.Sprintf("not a valid torrent id: %s", torrentId)
 	}
 }
 
