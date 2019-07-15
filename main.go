@@ -200,19 +200,19 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 			if isControllableService(service) {
 				if strings.HasPrefix(txt, conf.CommandServiceStart) { // start service
 					if output, err := helper.SystemctlStart(service); err == nil {
-						message = fmt.Sprintf("Started service: %s", service)
+						message = fmt.Sprintf("started service: %s", service)
 					} else {
-						message = fmt.Sprintf("Failed to start service: %s (%s)", service, err)
+						message = fmt.Sprintf("failed to start service: %s (%s)", service, err)
 
-						db.LogError(fmt.Sprintf("service start failed: %s", output))
+						db.LogError(fmt.Sprintf("service failed to start: %s", output))
 					}
 				} else if strings.HasPrefix(txt, conf.CommandServiceStop) { // stop service
 					if output, err := helper.SystemctlStop(service); err == nil {
-						message = fmt.Sprintf("Stopped service: %s", service)
+						message = fmt.Sprintf("stopped service: %s", service)
 					} else {
-						message = fmt.Sprintf("Failed to stop service: %s (%s)", service, err)
+						message = fmt.Sprintf("failed to stop service: %s (%s)", service, err)
 
-						db.LogError(fmt.Sprintf("service stop failed: %s", output))
+						db.LogError(fmt.Sprintf("service failed to stop: %s", output))
 					}
 				}
 			} else {

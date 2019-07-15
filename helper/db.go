@@ -86,11 +86,11 @@ func (d *Database) saveLog(typ, msg string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert into logs(type, message) values(?, ?)`); err != nil {
-		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(typ, msg); err != nil {
-			log.Printf("*** Failed to save log into local database: %s\n", err.Error())
+			log.Printf("*** failed to save log into local database: %s\n", err.Error())
 		}
 	}
 
@@ -111,12 +111,12 @@ func (d *Database) GetLogs(latestN int) []Log {
 	d.RLock()
 
 	if stmt, err := d.db.Prepare(`select type, message, datetime(time, 'localtime') as time from logs order by id desc limit ?`); err != nil {
-		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
 
 		if rows, err := stmt.Query(latestN); err != nil {
-			log.Printf("*** Failed to select logs from local database: %s\n", err.Error())
+			log.Printf("*** failed to select logs from local database: %s\n", err.Error())
 		} else {
 			defer rows.Close()
 
@@ -144,11 +144,11 @@ func (d *Database) SaveChat(chatId int64, userId string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert or ignore into chats(chat_id, user_id) values(?, ?)`); err != nil {
-		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(chatId, userId); err != nil {
-			log.Printf("*** Failed to save chat into local database: %s\n", err.Error())
+			log.Printf("*** failed to save chat into local database: %s\n", err.Error())
 		}
 	}
 
@@ -159,11 +159,11 @@ func (d *Database) DeleteChat(chatId int) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`delete from chats where chat_id = ?`); err != nil {
-		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(chatId); err != nil {
-			log.Printf("*** Failed to delete chat from local database: %s\n", err.Error())
+			log.Printf("*** failed to delete chat from local database: %s\n", err.Error())
 		}
 	}
 
@@ -176,12 +176,12 @@ func (d *Database) GetChats() []Chat {
 	d.RLock()
 
 	if stmt, err := d.db.Prepare(`select chat_id, user_id, datetime(create_time, 'localtime') as time from chats`); err != nil {
-		log.Printf("*** Failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
 
 		if rows, err := stmt.Query(); err != nil {
-			log.Printf("*** Failed to select chats from local database: %s\n", err.Error())
+			log.Printf("*** failed to select chats from local database: %s\n", err.Error())
 		} else {
 			defer rows.Close()
 
