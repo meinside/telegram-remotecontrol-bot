@@ -32,19 +32,19 @@ const (
 	CommandTransmissionDelete = "/trdelete"
 
 	// messages
-	MessageDefault                 = "Input your command:"
-	MessageUnknownCommand          = "Unknown command."
-	MessageUnprocessableFileFormat = "Unprocessable file format."
-	MessageNoControllableServices  = "No controllable services."
-	MessageNoLogs                  = "No saved logs."
-	MessageServiceToStart          = "Select service to start:"
-	MessageServiceToStop           = "Select service to stop:"
-	MessageTransmissionUpload      = "Input magnet, url, or file of target torrent:"
-	MessageTransmissionRemove      = "Input the number of torrent to remove from the list:"
-	MessageTransmissionDelete      = "Input the number of torrent to delete from the list and local storage:"
-	MessageTransmissionNoTorrents  = "No torrents."
-	MessageCancel                  = "Cancel"
-	MessageCanceled                = "Canceled."
+	MessageDefault                 = "input your command:"
+	MessageUnknownCommand          = "unknown command."
+	MessageUnprocessableFileFormat = "unprocessable file format."
+	MessageNoControllableServices  = "no controllable services."
+	MessageNoLogs                  = "no saved logs."
+	MessageServiceToStart          = "select service to start:"
+	MessageServiceToStop           = "select service to stop:"
+	MessageTransmissionUpload      = "input magnet, url, or file of target torrent:"
+	MessageTransmissionRemove      = "input the number of torrent to remove from the list:"
+	MessageTransmissionDelete      = "input the number of torrent to delete from the list and local storage:"
+	MessageTransmissionNoTorrents  = "no torrents."
+	MessageCancel                  = "cancel"
+	MessageCanceled                = "canceled."
 
 	//
 	NumRecentLogs = 20

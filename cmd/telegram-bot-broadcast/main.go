@@ -12,7 +12,7 @@ import (
 )
 
 func printUsage() {
-	fmt.Printf(`* Usage:
+	fmt.Printf(`* usage:
 
 	$ %[1]s [strings to broadcast]
 `, os.Args[0])

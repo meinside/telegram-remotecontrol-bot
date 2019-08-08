@@ -134,22 +134,22 @@ func isControllableService(service string) bool {
 // for showing help message
 func getHelp() string {
 	return fmt.Sprintf(`
-Following commands are supported:
+following commands are supported:
 
-*For Transmission*
+*for transmission*
 
 %s : show torrent list
 %s : add torrent with url or magnet
 %s : remove torrent from list
 %s : remove torrent and delete data
 
-*For Systemctl*
+*for systemctl*
 
 %s : show status of each service (systemctl is-active)
 %s : start a service (systemctl start)
 %s : stop a service (systemctl stop)
 
-*Others*
+*others*
 
 %s : show this bot's status
 %s : show latest logs of this bot
@@ -186,7 +186,7 @@ func getLogs() string {
 
 // for showing current status of this bot
 func getStatus() string {
-	return fmt.Sprintf("App Uptime: %s\nApp Memory Usage: %s\nSystem Disk Usage:\n%s", helper.GetUptime(launched), helper.GetMemoryUsage(), helper.GetDiskUsage(mountPoints))
+	return fmt.Sprintf("app uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s", helper.GetUptime(launched), helper.GetMemoryUsage(), helper.GetDiskUsage(mountPoints))
 }
 
 // parse service command and start/stop given service
