@@ -65,7 +65,7 @@ func GetUptime(launched time.Time) (uptime string) {
 func GetMemoryUsage() (usage string) {
 	sys, heap := status.MemoryUsage()
 
-	return fmt.Sprintf("Sys *%.1f MB*, Heap *%.1f MB*", float32(sys)/1024/1024, float32(heap)/1024/1024)
+	return fmt.Sprintf("sys *%.1f MB*, heap *%.1f MB*", float32(sys)/1024/1024, float32(heap)/1024/1024)
 }
 
 // get disk usage (https://gist.github.com/lunny/9828326)
@@ -111,7 +111,7 @@ func RemoveMarkdownChars(original, replaceWith string) string {
 // Sudo run given command with parameters and return combined output
 func sudoRunCmd(cmdAndParams []string) (string, error) {
 	if len(cmdAndParams) < 1 {
-		return "", fmt.Errorf("No command provided")
+		return "", fmt.Errorf("no command provided")
 	}
 
 	output, err := exec.Command("sudo", cmdAndParams...).CombinedOutput()
