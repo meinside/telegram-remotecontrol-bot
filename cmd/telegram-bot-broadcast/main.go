@@ -28,17 +28,17 @@ func main() {
 		if config, err := helper.GetConfig(); err == nil {
 			cliPort = config.CliPort
 			if cliPort <= 0 {
-				cliPort = conf.DefaultCliPortNumber
+				cliPort = conf.DefaultCLIPortNumber
 			}
 		} else {
-			fmt.Printf("failed to load config, using default port number: %d (%s)\n", conf.DefaultCliPortNumber, err)
+			fmt.Printf("failed to load config, using default port number: %d (%s)\n", conf.DefaultCLIPortNumber, err)
 
-			cliPort = conf.DefaultCliPortNumber
+			cliPort = conf.DefaultCLIPortNumber
 		}
 
 		message := strings.Join(args, " ")
 
-		if _, err := http.PostForm(fmt.Sprintf("http://localhost:%d%s", cliPort, conf.HttpBroadcastPath), url.Values{
+		if _, err := http.PostForm(fmt.Sprintf("http://localhost:%d%s", cliPort, conf.HTTPBroadcastPath), url.Values{
 			conf.ParamMessage: {message},
 		}); err != nil {
 			fmt.Printf("*** %s\n", err)
