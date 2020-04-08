@@ -14,26 +14,26 @@ import (
 	"github.com/meinside/rpi-tools/status"
 )
 
+// constants for config
 const (
-	// constants for config
 	ConfigFilename = "config.json"
 )
 
-// struct for config file
+// Config struct for config file
 type Config struct {
-	ApiToken                string   `json:"api_token"`
+	APIToken                string   `json:"api_token"`
 	AvailableIds            []string `json:"available_ids"`
 	ControllableServices    []string `json:"controllable_services,omitempty"`
 	MountPoints             []string `json:"mount_points,omitempty"`
 	MonitorInterval         int      `json:"monitor_interval"`
-	TransmissionRpcPort     int      `json:"transmission_rpc_port,omitempty"`
-	TransmissionRpcUsername string   `json:"transmission_rpc_username,omitempty"`
-	TransmissionRpcPasswd   string   `json:"transmission_rpc_passwd,omitempty"`
+	TransmissionRPCPort     int      `json:"transmission_rpc_port,omitempty"`
+	TransmissionRPCUsername string   `json:"transmission_rpc_username,omitempty"`
+	TransmissionRPCPasswd   string   `json:"transmission_rpc_passwd,omitempty"`
 	CliPort                 int      `json:"cli_port"`
 	IsVerbose               bool     `json:"is_verbose"`
 }
 
-// Read config
+// GetConfig reads config and return it
 func GetConfig() (config Config, err error) {
 	var execFilepath string
 	if execFilepath, err = os.Executable(); err == nil {
@@ -49,7 +49,7 @@ func GetConfig() (config Config, err error) {
 	return Config{}, err
 }
 
-// get uptime of this bot in seconds
+// GetUptime calculates uptime of this bot
 func GetUptime(launched time.Time) (uptime string) {
 	now := time.Now()
 	gap := now.Sub(launched)
@@ -61,14 +61,14 @@ func GetUptime(launched time.Time) (uptime string) {
 	return fmt.Sprintf("*%d* day(s) *%d* hour(s)", numDays, numHours)
 }
 
-// get memory usage
+// GetMemoryUsage calculates memory usage of this bot
 func GetMemoryUsage() (usage string) {
 	sys, heap := status.MemoryUsage()
 
 	return fmt.Sprintf("sys *%.1f MB*, heap *%.1f MB*", float32(sys)/1024/1024, float32(heap)/1024/1024)
 }
 
-// get disk usage (https://gist.github.com/lunny/9828326)
+// GetDiskUsage calculates disk usage of the system (https://gist.github.com/lunny/9828326)
 func GetDiskUsage(additionalPaths []string) (usage string) {
 	paths := []string{"/"}
 	for _, p := range additionalPaths {
@@ -98,7 +98,7 @@ func GetDiskUsage(additionalPaths []string) (usage string) {
 	return strings.Join(lines, "\n")
 }
 
-// XXX - remove markdown characters for avoiding
+// RemoveMarkdownChars removes markdown characters for avoiding
 // 'Bad Request: Can't parse message text: Can't find end of the entity starting at byte offset ...' error
 // from the server
 func RemoveMarkdownChars(original, replaceWith string) string {
@@ -118,7 +118,7 @@ func sudoRunCmd(cmdAndParams []string) (string, error) {
 	return strings.TrimRight(string(output), "\n"), err
 }
 
-// Run `systemctl status is-active`
+// SystemctlStatus runs `systemctl status is-active`
 func SystemctlStatus(services []string) (statuses map[string]string, success bool) {
 	statuses = make(map[string]string)
 
@@ -133,17 +133,17 @@ func SystemctlStatus(services []string) (statuses map[string]string, success boo
 	return statuses, true
 }
 
-// Run `systemctl start [service]`
+// SystemctlStart runs `systemctl start [service]`
 func SystemctlStart(service string) (message string, err error) {
 	return sudoRunCmd([]string{"systemctl", "start", service})
 }
 
-// Run `systemctl stop [service]`
+// SystemctlStop runs `systemctl stop [service]`
 func SystemctlStop(service string) (message string, err error) {
 	return sudoRunCmd([]string{"systemctl", "stop", service})
 }
 
-// Run `systemctl restart [service]`
+// SystemctlRestart runs `systemctl restart [service]`
 func SystemctlRestart(service string) (message string, err error) {
 	return sudoRunCmd([]string{"systemctl", "restart", service})
 }

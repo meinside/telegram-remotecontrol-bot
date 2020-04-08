@@ -9,39 +9,44 @@ import (
 
 	"database/sql"
 
+	// for sqlite3
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// constants for local database
 const (
-	// constants for local database
-	DbFilename = "db.sqlite"
+	DBFilename = "db.sqlite"
 )
 
+// Database struct
 type Database struct {
 	db *sql.DB
 	sync.RWMutex
 }
 
+// Log struct
 type Log struct {
 	Type    string
 	Message string
 	Time    time.Time
 }
 
+// Chat struct
 type Chat struct {
-	ChatId int
-	UserId string
+	ChatID int
+	UserID string
 	Time   time.Time
 }
 
 var _db *Database = nil
 
-func OpenDb() *Database {
+// OpenDB opens database
+func OpenDB() *Database {
 	if _db == nil {
 		if execFilepath, err := os.Executable(); err != nil {
 			panic(err)
 		} else {
-			if db, err := sql.Open("sqlite3", filepath.Join(filepath.Dir(execFilepath), DbFilename)); err != nil {
+			if db, err := sql.Open("sqlite3", filepath.Join(filepath.Dir(execFilepath), DBFilename)); err != nil {
 				panic("Failed to open database: " + err.Error())
 			} else {
 				_db = &Database{
@@ -75,7 +80,8 @@ func OpenDb() *Database {
 	return _db
 }
 
-func CloseDb() {
+// CloseDB closes database
+func CloseDB() {
 	if _db != nil {
 		_db.db.Close()
 		_db = nil
@@ -97,14 +103,17 @@ func (d *Database) saveLog(typ, msg string) {
 	d.Unlock()
 }
 
+// Log logs a message
 func (d *Database) Log(msg string) {
 	d.saveLog("log", msg)
 }
 
+// LogError logs an error message
 func (d *Database) LogError(msg string) {
 	d.saveLog("err", msg)
 }
 
+// GetLogs fetches logs
 func (d *Database) GetLogs(latestN int) []Log {
 	logs := []Log{}
 
@@ -140,14 +149,15 @@ func (d *Database) GetLogs(latestN int) []Log {
 	return logs
 }
 
-func (d *Database) SaveChat(chatId int64, userId string) {
+// SaveChat saves chat
+func (d *Database) SaveChat(chatID int64, userID string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert or ignore into chats(chat_id, user_id) values(?, ?)`); err != nil {
 		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
-		if _, err = stmt.Exec(chatId, userId); err != nil {
+		if _, err = stmt.Exec(chatID, userID); err != nil {
 			log.Printf("*** failed to save chat into local database: %s\n", err.Error())
 		}
 	}
@@ -155,14 +165,15 @@ func (d *Database) SaveChat(chatId int64, userId string) {
 	d.Unlock()
 }
 
-func (d *Database) DeleteChat(chatId int) {
+// DeleteChat deletes chat
+func (d *Database) DeleteChat(chatID int) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`delete from chats where chat_id = ?`); err != nil {
 		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
 	} else {
 		defer stmt.Close()
-		if _, err = stmt.Exec(chatId); err != nil {
+		if _, err = stmt.Exec(chatID); err != nil {
 			log.Printf("*** failed to delete chat from local database: %s\n", err.Error())
 		}
 	}
@@ -170,6 +181,7 @@ func (d *Database) DeleteChat(chatId int) {
 	d.Unlock()
 }
 
+// GetChats retrieves chats
 func (d *Database) GetChats() []Chat {
 	chats := []Chat{}
 
@@ -185,16 +197,16 @@ func (d *Database) GetChats() []Chat {
 		} else {
 			defer rows.Close()
 
-			var chatId int
-			var userId, datetime string
+			var chatID int
+			var userID, datetime string
 			var tm time.Time
 			for rows.Next() {
-				rows.Scan(&chatId, &userId, &datetime)
+				rows.Scan(&chatID, &userID, &datetime)
 				tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
 
 				chats = append(chats, Chat{
-					ChatId: chatId,
-					UserId: userId,
+					ChatID: chatID,
+					UserID: userID,
 					Time:   tm,
 				})
 			}

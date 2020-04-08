@@ -21,23 +21,24 @@ import (
 )
 
 const (
-	githubPageUrl = "https://github.com/meinside/telegram-bot-remotecontrol"
+	githubPageURL = "https://github.com/meinside/telegram-bot-remotecontrol"
 )
 
-type Status int16
+type status int16
 
+// application statuses
 const (
-	StatusWaiting                   Status = iota
-	StatusWaitingTransmissionUpload Status = iota
+	StatusWaiting                   status = iota
+	StatusWaitingTransmissionUpload status = iota
 )
 
-type Session struct {
-	UserId        string
-	CurrentStatus Status
+type session struct {
+	UserID        string
+	CurrentStatus status
 }
 
-type SessionPool struct {
-	Sessions map[string]Session
+type sessionPool struct {
+	Sessions map[string]session
 	sync.Mutex
 }
 
@@ -50,7 +51,7 @@ var controllableServices []string
 var mountPoints []string
 var rpcPort int
 var rpcUsername, rpcPasswd string
-var pool SessionPool
+var pool sessionPool
 var queue chan string
 var cliPort int
 var launched time.Time
@@ -75,16 +76,16 @@ func init() {
 
 	// read variables from config file
 	if config, err := helper.GetConfig(); err == nil {
-		apiToken = config.ApiToken
+		apiToken = config.APIToken
 		availableIds = config.AvailableIds
 		controllableServices = config.ControllableServices
 		mountPoints = config.MountPoints
-		rpcPort = config.TransmissionRpcPort
+		rpcPort = config.TransmissionRPCPort
 		if rpcPort <= 0 {
-			rpcPort = conf.DefaultTransmissionRpcPort
+			rpcPort = conf.DefaultTransmissionRPCPort
 		}
-		rpcUsername = config.TransmissionRpcUsername
-		rpcPasswd = config.TransmissionRpcPasswd
+		rpcUsername = config.TransmissionRPCUsername
+		rpcPasswd = config.TransmissionRPCPasswd
 		monitorInterval = config.MonitorInterval
 		if monitorInterval <= 0 {
 			monitorInterval = conf.DefaultMonitorIntervalSeconds
@@ -92,27 +93,27 @@ func init() {
 		isVerbose = config.IsVerbose
 
 		// initialize variables
-		sessions := make(map[string]Session)
+		sessions := make(map[string]session)
 		for _, v := range availableIds {
-			sessions[v] = Session{
-				UserId:        v,
+			sessions[v] = session{
+				UserID:        v,
 				CurrentStatus: StatusWaiting,
 			}
 		}
-		pool = SessionPool{
+		pool = sessionPool{
 			Sessions: sessions,
 		}
 		queue = make(chan string, conf.QueueSize)
 
 		// open database
-		db = helper.OpenDb()
+		db = helper.OpenDB()
 	} else {
 		panic(err)
 	}
 }
 
 // check if given Telegram id is available
-func isAvailableId(id string) bool {
+func isAvailableID(id string) bool {
 	for _, v := range availableIds {
 		if v == id {
 			return true
@@ -176,12 +177,12 @@ func getLogs() string {
 
 	if len(logs) <= 0 {
 		return conf.MessageNoLogs
-	} else {
-		for _, log := range logs {
-			lines = append(lines, fmt.Sprintf("%s %s: %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
-		}
-		return strings.Join(lines, "\n")
 	}
+
+	for _, log := range logs {
+		lines = append(lines, fmt.Sprintf("%s %s: %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // for showing current status of this bot
@@ -267,7 +268,7 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 					// inline keyboards
 					keys := map[string]string{}
 					for _, t := range torrents {
-						keys[fmt.Sprintf("%d. %s", t.Id, t.Name)] = fmt.Sprintf("%s %d", cmd, t.Id)
+						keys[fmt.Sprintf("%d. %s", t.ID, t.Name)] = fmt.Sprintf("%s %d", cmd, t.ID)
 					}
 					keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
 
@@ -293,29 +294,29 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 // process incoming update from Telegram
 func processUpdate(b *bot.Bot, update bot.Update) bool {
 	// check username
-	var userId string
+	var userID string
 	if update.Message.From.Username == nil {
 		_stderr.Printf("not allowed, or has no username: %s", update.Message.From.FirstName)
 		return false
 	}
-	userId = *update.Message.From.Username
-	if !isAvailableId(userId) {
-		_stderr.Printf("id not allowed: %s", userId)
+	userID = *update.Message.From.Username
+	if !isAvailableID(userID) {
+		_stderr.Printf("id not allowed: %s", userID)
 
 		// log error to db
-		db.LogError(fmt.Sprintf("not allowed id: %s", userId))
+		db.LogError(fmt.Sprintf("not allowed id: %s", userID))
 
 		return false
 	}
 
 	// save chat id
-	db.SaveChat(update.Message.Chat.ID, userId)
+	db.SaveChat(update.Message.Chat.ID, userID)
 
 	// process result
 	result := false
 
 	pool.Lock()
-	if session, exists := pool.Sessions[userId]; exists {
+	if s, exists := pool.Sessions[userID]; exists {
 		// text from message
 		var txt string
 		if update.Message.HasText() {
@@ -327,15 +328,15 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		var message string
 		var options map[string]interface{} = defaultOptions()
 
-		switch session.CurrentStatus {
+		switch s.CurrentStatus {
 		case StatusWaiting:
 			if update.Message.Document != nil { // if a file is received,
 				fileResult := b.GetFile(update.Message.Document.FileID)
-				fileUrl := b.GetFileURL(*fileResult.Result)
+				fileURL := b.GetFileURL(*fileResult.Result)
 
 				// XXX - only support: .torrent
-				if strings.HasSuffix(fileUrl, ".torrent") {
-					message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, fileUrl)
+				if strings.HasSuffix(fileURL, ".torrent") {
+					message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, fileURL)
 				} else {
 					message = conf.MessageUnprocessableFileFormat
 				}
@@ -372,8 +373,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 						message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, arg)
 					} else {
 						message = conf.MessageTransmissionUpload
-						pool.Sessions[userId] = Session{
-							UserId:        userId,
+						pool.Sessions[userID] = session{
+							UserID:        userID,
 							CurrentStatus: StatusWaitingTransmissionUpload,
 						}
 						options["reply_markup"] = bot.ReplyKeyboardMarkup{
@@ -399,7 +400,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 					options["reply_markup"] = bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
 						InlineKeyboard: [][]bot.InlineKeyboardButton{
 							bot.NewInlineKeyboardButtonsWithURL(map[string]string{
-								"GitHub": githubPageUrl,
+								"GitHub": githubPageURL,
 							}),
 						},
 					}
@@ -430,8 +431,8 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			}
 
 			// reset status
-			pool.Sessions[userId] = Session{
-				UserId:        userId,
+			pool.Sessions[userID] = session{
+				UserID:        userID,
 				CurrentStatus: StatusWaiting,
 			}
 		}
@@ -449,10 +450,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 			db.LogError(*sent.Description)
 		}
 	} else {
-		_stderr.Printf("session does not exist for id: %s", userId)
+		_stderr.Printf("session does not exist for id: %s", userID)
 
 		// log error to db
-		db.LogError(fmt.Sprintf("no session for id: %s", userId))
+		db.LogError(fmt.Sprintf("no session for id: %s", userID))
 	}
 	pool.Unlock()
 
@@ -516,26 +517,26 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 // broadcast a messge to given chats
 func broadcast(client *bot.Bot, chats []helper.Chat, message string) {
 	for _, chat := range chats {
-		if isAvailableId(chat.UserId) {
+		if isAvailableID(chat.UserID) {
 			options := defaultOptions()
 			if checkMarkdownValidity(message) {
 				options["parse_mode"] = bot.ParseModeMarkdown
 			}
 			if sent := client.SendMessage(
-				chat.ChatId,
+				chat.ChatID,
 				message,
 				options,
 			); !sent.Ok {
-				_stderr.Printf("failed to broadcast to chat id %d: %s", chat.ChatId, *sent.Description)
+				_stderr.Printf("failed to broadcast to chat id %d: %s", chat.ChatID, *sent.Description)
 
 				// log error to db
 				db.LogError(*sent.Description)
 			}
 		} else {
-			_stderr.Printf("id not allowed for broadcasting: %s", chat.UserId)
+			_stderr.Printf("id not allowed for broadcasting: %s", chat.UserID)
 
 			// log error to db
-			db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserId))
+			db.LogError(fmt.Sprintf("not allowed id for broadcasting: %s", chat.UserID))
 		}
 	}
 }
@@ -610,11 +611,11 @@ func main() {
 			// start web server for CLI
 			go func() {
 				if cliPort <= 0 {
-					cliPort = conf.DefaultCliPortNumber
+					cliPort = conf.DefaultCLIPortNumber
 				}
 				_stdout.Printf("starting local web server for CLI on port: %d", cliPort)
 
-				http.HandleFunc(conf.HttpBroadcastPath, httpHandler)
+				http.HandleFunc(conf.HTTPBroadcastPath, httpHandler)
 				if err := http.ListenAndServe(fmt.Sprintf(":%d", cliPort), nil); err != nil {
 					panic(err)
 				}

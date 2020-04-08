@@ -1,14 +1,15 @@
 package conf
 
+// constants
 const (
 	// for CLI
-	HttpBroadcastPath    = "/broadcast"
-	DefaultCliPortNumber = 59992
+	HTTPBroadcastPath    = "/broadcast"
+	DefaultCLIPortNumber = 59992
 	ParamMessage         = "m"
 	QueueSize            = 3
 
 	// for Transmission daemon
-	DefaultTransmissionRpcPort = 9091
+	DefaultTransmissionRPCPort = 9091
 
 	// for monitoring
 	DefaultMonitorIntervalSeconds = 3
@@ -32,20 +33,20 @@ const (
 	CommandTransmissionDelete = "/trdelete"
 
 	// messages
-	MessageDefault                 = "input your command:"
-	MessageUnknownCommand          = "unknown command."
-	MessageUnprocessableFileFormat = "unprocessable file format."
-	MessageNoControllableServices  = "no controllable services."
-	MessageNoLogs                  = "no saved logs."
-	MessageServiceToStart          = "select service to start:"
-	MessageServiceToStop           = "select service to stop:"
-	MessageTransmissionUpload      = "input magnet, url, or file of target torrent:"
-	MessageTransmissionRemove      = "input the number of torrent to remove from the list:"
-	MessageTransmissionDelete      = "input the number of torrent to delete from the list and local storage:"
-	MessageTransmissionNoTorrents  = "no torrents."
-	MessageCancel                  = "cancel"
-	MessageCanceled                = "canceled."
+	MessageDefault                 = "Input your command:"
+	MessageUnknownCommand          = "Unknown command."
+	MessageUnprocessableFileFormat = "Unprocessable file format."
+	MessageNoControllableServices  = "No controllable services."
+	MessageNoLogs                  = "No saved logs."
+	MessageServiceToStart          = "Select service to start:"
+	MessageServiceToStop           = "Select service to stop:"
+	MessageTransmissionUpload      = "Send magnet, url, or file of target torrent:"
+	MessageTransmissionRemove      = "Send the id of torrent to remove from the list:"
+	MessageTransmissionDelete      = "Send the id of torrent to delete from the list and local storage:"
+	MessageTransmissionNoTorrents  = "No torrents."
+	MessageCancel                  = "Cancel"
+	MessageCanceled                = "Canceled."
 
-	//
+	// number of recent logs
 	NumRecentLogs = 20
 )

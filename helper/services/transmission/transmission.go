@@ -16,25 +16,25 @@ import (
 )
 
 const (
-	httpHeaderXTransmissionSessionId = "X-Transmission-Session-Id"
+	httpHeaderXTransmissionSessionID = "X-Transmission-Session-Id"
 	numRetries                       = 3
 )
 
-type transmissionRpcRequest struct {
+type rpcRequest struct {
 	Method    string                 `json:"method"`
 	Arguments map[string]interface{} `json:"arguments,omitempty"`
 	Tag       int                    `json:"tag,omitempty"`
 }
 
-type transmissionRpcResponse struct {
-	Result    string                      `json:"result,omitempty"`
-	Arguments transmissionRpcResponseArgs `json:"arguments,omitempty"`
-	Tag       int                         `json:"tag,omitempty"`
+type rpcResponse struct {
+	Result    string          `json:"result,omitempty"`
+	Arguments rpcResponseArgs `json:"arguments,omitempty"`
+	Tag       int             `json:"tag,omitempty"`
 }
 
-type transmissionRpcResponseArgs struct {
-	TorrentDuplicate interface{}                      `json:"torrent-duplicate,omitempty"`
-	Torrents         []transmissionRpcResponseTorrent `json:"torrents,omitempty"`
+type rpcResponseArgs struct {
+	TorrentDuplicate interface{}          `json:"torrent-duplicate,omitempty"`
+	Torrents         []RPCResponseTorrent `json:"torrents,omitempty"`
 }
 
 var torrentFields []string = []string{
@@ -45,30 +45,31 @@ var torrentFields []string = []string{
 	"errorString",
 }
 
-type transmissionRpcResponseTorrent struct {
-	Id          int     `json:"id"`
+// RPCResponseTorrent for torrent response
+type RPCResponseTorrent struct {
+	ID          int     `json:"id"`
 	Name        string  `json:"name"`
 	PercentDone float32 `json:"percentDone"`
 	TotalSize   int64   `json:"totalSize"`
 	Error       string  `json:"errorString"`
 }
 
-var xTransmissionSessionId string = ""
+var xTransmissionSessionID string = ""
 
-func getLocalTransmissionRpcUrl(port int, username, passwd string) string {
-	var rpcUrl string
+func getLocalTransmissionRPCURL(port int, username, passwd string) string {
+	var rpcURL string
 	if len(username) > 0 && len(passwd) > 0 {
-		rpcUrl = fmt.Sprintf("http://%s:%s@localhost:%d/transmission/rpc", url.QueryEscape(username), url.QueryEscape(passwd), port)
+		rpcURL = fmt.Sprintf("http://%s:%s@localhost:%d/transmission/rpc", url.QueryEscape(username), url.QueryEscape(passwd), port)
 	} else {
-		rpcUrl = fmt.Sprintf("http://localhost:%d/transmission/rpc", port)
+		rpcURL = fmt.Sprintf("http://localhost:%d/transmission/rpc", port)
 	}
-	return rpcUrl
+	return rpcURL
 }
 
 // POST to Transmission RPC server
 //
 // https://trac.transmissionbt.com/browser/trunk/extras/rpc-spec.txt
-func post(port int, username, passwd string, request transmissionRpcRequest, numRetriesLeft int) (res []byte, err error) {
+func post(port int, username, passwd string, request rpcRequest, numRetriesLeft int) (res []byte, err error) {
 	if numRetriesLeft <= 0 {
 		return res, fmt.Errorf("no more retries for this request: %v", request)
 	}
@@ -76,9 +77,9 @@ func post(port int, username, passwd string, request transmissionRpcRequest, num
 	var data []byte
 	if data, err = json.Marshal(request); err == nil {
 		var req *http.Request
-		if req, err = http.NewRequest("POST", getLocalTransmissionRpcUrl(port, username, passwd), bytes.NewBuffer(data)); err == nil {
+		if req, err = http.NewRequest("POST", getLocalTransmissionRPCURL(port, username, passwd), bytes.NewBuffer(data)); err == nil {
 			// headers
-			req.Header.Set(httpHeaderXTransmissionSessionId, xTransmissionSessionId)
+			req.Header.Set(httpHeaderXTransmissionSessionID, xTransmissionSessionID)
 
 			var resp *http.Response
 			client := &http.Client{}
@@ -86,16 +87,16 @@ func post(port int, username, passwd string, request transmissionRpcRequest, num
 				defer resp.Body.Close()
 
 				if resp.StatusCode == http.StatusConflict {
-					if sessionId, exists := resp.Header[httpHeaderXTransmissionSessionId]; exists && len(sessionId) > 0 {
+					if sessionID, exists := resp.Header[httpHeaderXTransmissionSessionID]; exists && len(sessionID) > 0 {
 						// update session id
-						xTransmissionSessionId = sessionId[0]
+						xTransmissionSessionID = sessionID[0]
 
 						return post(port, username, passwd, request, numRetriesLeft-1) // XXX - retry
-					} else {
-						err = fmt.Errorf("could not find '%s' value from http headers", httpHeaderXTransmissionSessionId)
-
-						log.Printf("error in RPC server: %s\n", err.Error())
 					}
+
+					err = fmt.Errorf("couldn't find '%s' value from http headers", httpHeaderXTransmissionSessionID)
+
+					log.Printf("error in RPC server: %s\n", err.Error())
 				}
 
 				res, _ = ioutil.ReadAll(resp.Body)
@@ -123,17 +124,17 @@ func post(port int, username, passwd string, request transmissionRpcRequest, num
 	return res, err
 }
 
-// for retrieving torrent objects
-func GetTorrents(port int, username, passwd string) (torrents []transmissionRpcResponseTorrent, err error) {
+// GetTorrents retrieves torrent objects
+func GetTorrents(port int, username, passwd string) (torrents []RPCResponseTorrent, err error) {
 	var output []byte
 	if output, err = post(port, username, passwd,
-		transmissionRpcRequest{
+		rpcRequest{
 			Method: "torrent-get",
 			Arguments: map[string]interface{}{
 				"fields": torrentFields,
 			},
 		}, numRetries); err == nil {
-		var result transmissionRpcResponse
+		var result rpcResponse
 		if err = json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
 				torrents = result.Arguments.Torrents
@@ -145,9 +146,11 @@ func GetTorrents(port int, username, passwd string) (torrents []transmissionRpcR
 	return torrents, err
 }
 
-// for showing the list of transmission
+// GetList retrieves the list of transmission
 func GetList(port int, username, passwd string) string {
-	if torrents, err := GetTorrents(port, username, passwd); err == nil {
+	var torrents []RPCResponseTorrent
+	var err error
+	if torrents, err = GetTorrents(port, username, passwd); err == nil {
 		numTorrents := len(torrents)
 		if numTorrents > 0 {
 			strs := make([]string, numTorrents)
@@ -155,7 +158,7 @@ func GetList(port int, username, passwd string) string {
 				if len(t.Error) > 0 {
 					strs[i] = fmt.Sprintf(
 						"*%d*. _%s_ (total %s, *%s*)",
-						t.Id,
+						t.ID,
 						helper.RemoveMarkdownChars(t.Name, " "),
 						readableSize(t.TotalSize),
 						t.Error,
@@ -163,7 +166,7 @@ func GetList(port int, username, passwd string) string {
 				} else {
 					strs[i] = fmt.Sprintf(
 						"*%d*. _%s_ (total %s / xferred %s, %.2f%%)",
-						t.Id,
+						t.ID,
 						helper.RemoveMarkdownChars(t.Name, " "),
 						readableSize(t.TotalSize),
 						readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
@@ -174,72 +177,73 @@ func GetList(port int, username, passwd string) string {
 			strs = append(strs, "--")
 			strs = append(strs, fmt.Sprintf("total %d torrent(s)", numTorrents))
 			return strings.Join(strs, "\n")
-		} else {
-			return conf.MessageTransmissionNoTorrents
 		}
-	} else {
-		return err.Error()
+
+		return conf.MessageTransmissionNoTorrents
 	}
+
+	return err.Error()
 }
 
-// for adding a torrent(with magnet or .torrent file) to the list of transmission
+// AddTorrent adds a torrent(with magnet or .torrent file) to the list of transmission
 func AddTorrent(port int, username, passwd, torrent string) string {
-	if output, err := post(port, username, passwd,
-		transmissionRpcRequest{
-			Method: "torrent-add",
-			Arguments: map[string]interface{}{
-				"filename": torrent,
-			},
-		}, numRetries); err == nil {
-		var result transmissionRpcResponse
-		if err := json.Unmarshal(output, &result); err == nil {
+	var output []byte
+	var err error
+	if output, err = post(port, username, passwd, rpcRequest{
+		Method: "torrent-add",
+		Arguments: map[string]interface{}{
+			"filename": torrent,
+		},
+	}, numRetries); err == nil {
+		var result rpcResponse
+		if err = json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
 				if result.Arguments.TorrentDuplicate != nil {
-					return "duplicated torrent was given"
-				} else {
-					return "given torrent was successfully added to the list"
+					return "Duplicated torrent was given."
 				}
-			} else {
-				return fmt.Sprintf("failed to add given torrent")
+
+				return "Given torrent was successfully added to the list."
 			}
-		} else {
-			return fmt.Sprintf("malformed RPC server response: %s", string(output))
+
+			return "Failed to add given torrent."
 		}
-	} else {
-		return fmt.Sprintf("failed to add given torrent: %s", string(output))
+
+		return fmt.Sprintf("Malformed RPC server response: %s", string(output))
 	}
+
+	return fmt.Sprintf("Failed to add given torrent: %s", err)
 }
 
-func removeTorrent(port int, username, passwd, torrentId string, deleteLocal bool) string {
-	if numId, err := strconv.Atoi(torrentId); err == nil {
+func removeTorrent(port int, username, passwd, torrentID string, deleteLocal bool) string {
+	if numID, err := strconv.Atoi(torrentID); err == nil {
 		if output, err := post(port, username, passwd,
-			transmissionRpcRequest{
+			rpcRequest{
 				Method: "torrent-remove",
 				Arguments: map[string]interface{}{
-					"ids":               []int{numId},
+					"ids":               []int{numID},
 					"delete-local-data": deleteLocal,
 				},
 			}, numRetries); err == nil {
-			var result transmissionRpcResponse
+			var result rpcResponse
 			if err := json.Unmarshal(output, &result); err == nil {
 				if result.Result == "success" {
 					if deleteLocal {
-						return fmt.Sprintf("torrent id: %s and its data were successfully deleted", torrentId)
-					} else {
-						return fmt.Sprintf("torrent id: %s was successfully removed from the list", torrentId)
+						return fmt.Sprintf("Torrent id: %s and its data were successfully deleted", torrentID)
 					}
-				} else {
-					return fmt.Sprintf("failed to remove given torrent")
+
+					return fmt.Sprintf("Torrent id: %s was successfully removed from the list", torrentID)
 				}
-			} else {
-				return fmt.Sprintf("malformed RPC server response: %s", string(output))
+
+				return "Failed to remove given torrent."
 			}
-		} else {
-			return fmt.Sprintf("failed to remove given torrent: %s", err.Error())
+
+			return fmt.Sprintf("Malformed RPC server response: %s", string(output))
 		}
-	} else {
-		return fmt.Sprintf("not a valid torrent id: %s", torrentId)
+
+		return fmt.Sprintf("Failed to remove given torrent: %s", err)
 	}
+
+	return fmt.Sprintf("not a valid torrent id: %s", torrentID)
 }
 
 // convert given number to human-readable size string
@@ -269,12 +273,12 @@ func readableSize(num int64) (str string) {
 	return str
 }
 
-// for canceling/removing a torrent from the list
-func RemoveTorrent(port int, username, passwd, torrentId string) string {
-	return removeTorrent(port, username, passwd, torrentId, false)
+// RemoveTorrent cancels/removes a torrent from the list
+func RemoveTorrent(port int, username, passwd, torrentID string) string {
+	return removeTorrent(port, username, passwd, torrentID, false)
 }
 
-// for removing a torrent and its local data from the list
-func DeleteTorrent(port int, username, passwd, torrentId string) string {
-	return removeTorrent(port, username, passwd, torrentId, true)
+// DeleteTorrent removes a torrent and its local data from the list
+func DeleteTorrent(port int, username, passwd, torrentID string) string {
+	return removeTorrent(port, username, passwd, torrentID, true)
 }
