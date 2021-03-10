@@ -596,7 +596,7 @@ func main() {
 		_stdout.Printf("launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
-		if unhooked := client.DeleteWebhook(); unhooked.Ok {
+		if unhooked := client.DeleteWebhook(false); unhooked.Ok {
 			// wait for CLI message channel
 			go func() {
 				for {
