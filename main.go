@@ -342,7 +342,10 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 				}
 			} else {
 				switch {
-				// start
+				// magnet url
+				case strings.HasPrefix(txt, "magnet:"):
+					message = transmission.AddTorrent(rpcPort, rpcUsername, rpcPasswd, txt)
+				// /start
 				case strings.HasPrefix(txt, conf.CommandStart):
 					message = conf.MessageDefault
 				// systemctl
