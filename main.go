@@ -232,7 +232,7 @@ func parseServiceCommand(txt string) (message string, keyboards [][]bot.InlineKe
 				// add cancel button
 				cancel := conf.CommandCancel
 				keyboards = append(keyboards, []bot.InlineKeyboardButton{
-					bot.InlineKeyboardButton{
+					{
 						Text:         conf.MessageCancel,
 						CallbackData: &cancel,
 					},
@@ -326,7 +326,7 @@ func processUpdate(b *bot.Bot, update bot.Update) bool {
 		}
 
 		var message string
-		var options map[string]interface{} = defaultOptions()
+		var options = defaultOptions()
 
 		switch s.CurrentStatus {
 		case StatusWaiting:
@@ -471,7 +471,7 @@ func processCallbackQuery(b *bot.Bot, update bot.Update) bool {
 	// process result
 	result := false
 
-	var message string = ""
+	var message string
 	if strings.HasPrefix(txt, conf.CommandCancel) {
 		message = ""
 	} else if strings.HasPrefix(txt, conf.CommandServiceStart) || strings.HasPrefix(txt, conf.CommandServiceStop) { // service
