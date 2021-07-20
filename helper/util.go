@@ -71,9 +71,7 @@ func GetMemoryUsage() (usage string) {
 // GetDiskUsage calculates disk usage of the system (https://gist.github.com/lunny/9828326)
 func GetDiskUsage(additionalPaths []string) (usage string) {
 	paths := []string{"/"}
-	for _, p := range additionalPaths {
-		paths = append(paths, p)
-	}
+	paths = append(paths, additionalPaths...)
 
 	var lines []string
 	for _, p := range paths {

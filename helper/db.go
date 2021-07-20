@@ -92,11 +92,11 @@ func (d *Database) saveLog(typ, msg string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert into logs(type, message) values(?, ?)`); err != nil {
-		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(typ, msg); err != nil {
-			log.Printf("*** failed to save log into local database: %s\n", err.Error())
+			log.Printf("*** failed to save log into local database: %s", err.Error())
 		}
 	}
 
@@ -120,26 +120,29 @@ func (d *Database) GetLogs(latestN int) []Log {
 	d.RLock()
 
 	if stmt, err := d.db.Prepare(`select type, message, datetime(time, 'localtime') as time from logs order by id desc limit ?`); err != nil {
-		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s", err.Error())
 	} else {
 		defer stmt.Close()
 
 		if rows, err := stmt.Query(latestN); err != nil {
-			log.Printf("*** failed to select logs from local database: %s\n", err.Error())
+			log.Printf("*** failed to select logs from local database: %s", err.Error())
 		} else {
 			defer rows.Close()
 
 			var typ, msg, datetime string
 			var tm time.Time
 			for rows.Next() {
-				rows.Scan(&typ, &msg, &datetime)
-				tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
+				if err := rows.Scan(&typ, &msg, &datetime); err == nil {
+					tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
 
-				logs = append(logs, Log{
-					Type:    typ,
-					Message: msg,
-					Time:    tm,
-				})
+					logs = append(logs, Log{
+						Type:    typ,
+						Message: msg,
+						Time:    tm,
+					})
+				} else {
+					log.Printf("*** failed to scan row: %s", err.Error())
+				}
 			}
 		}
 	}
@@ -154,11 +157,11 @@ func (d *Database) SaveChat(chatID int64, userID string) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`insert or ignore into chats(chat_id, user_id) values(?, ?)`); err != nil {
-		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(chatID, userID); err != nil {
-			log.Printf("*** failed to save chat into local database: %s\n", err.Error())
+			log.Printf("*** failed to save chat into local database: %s", err.Error())
 		}
 	}
 
@@ -170,11 +173,11 @@ func (d *Database) DeleteChat(chatID int) {
 	d.Lock()
 
 	if stmt, err := d.db.Prepare(`delete from chats where chat_id = ?`); err != nil {
-		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s", err.Error())
 	} else {
 		defer stmt.Close()
 		if _, err = stmt.Exec(chatID); err != nil {
-			log.Printf("*** failed to delete chat from local database: %s\n", err.Error())
+			log.Printf("*** failed to delete chat from local database: %s", err.Error())
 		}
 	}
 
@@ -188,12 +191,12 @@ func (d *Database) GetChats() []Chat {
 	d.RLock()
 
 	if stmt, err := d.db.Prepare(`select chat_id, user_id, datetime(create_time, 'localtime') as time from chats`); err != nil {
-		log.Printf("*** failed to prepare a statement: %s\n", err.Error())
+		log.Printf("*** failed to prepare a statement: %s", err.Error())
 	} else {
 		defer stmt.Close()
 
 		if rows, err := stmt.Query(); err != nil {
-			log.Printf("*** failed to select chats from local database: %s\n", err.Error())
+			log.Printf("*** failed to select chats from local database: %s", err.Error())
 		} else {
 			defer rows.Close()
 
@@ -201,14 +204,17 @@ func (d *Database) GetChats() []Chat {
 			var userID, datetime string
 			var tm time.Time
 			for rows.Next() {
-				rows.Scan(&chatID, &userID, &datetime)
-				tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
+				if err := rows.Scan(&chatID, &userID, &datetime); err == nil {
+					tm, _ = time.Parse("2006-01-02 15:04:05", datetime)
 
-				chats = append(chats, Chat{
-					ChatID: chatID,
-					UserID: userID,
-					Time:   tm,
-				})
+					chats = append(chats, Chat{
+						ChatID: chatID,
+						UserID: userID,
+						Time:   tm,
+					})
+				} else {
+					log.Printf("*** failed to scan row: %s", err.Error())
+				}
 			}
 		}
 	}
