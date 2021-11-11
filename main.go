@@ -275,7 +275,7 @@ func parseTransmissionCommand(txt string) (message string, keyboards [][]bot.Inl
 					// add cancel button
 					cancel := conf.CommandCancel
 					keyboards = append(keyboards, []bot.InlineKeyboardButton{
-						bot.InlineKeyboardButton{
+						{
 							Text:         conf.MessageCancel,
 							CallbackData: &cancel,
 						},
