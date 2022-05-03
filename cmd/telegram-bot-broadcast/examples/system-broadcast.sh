@@ -2,7 +2,7 @@
 #
 # system-broadcast.sh
 #
-# created by : meinside@gmail.com
+# created by : meinside@duck.com
 # last update: 2016.04.12.
 #
 # for broadcasting system status
