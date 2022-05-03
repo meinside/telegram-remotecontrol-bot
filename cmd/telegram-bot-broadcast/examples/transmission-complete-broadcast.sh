@@ -2,7 +2,7 @@
 #
 # transmission-complete-broadcast.sh
 #
-# created by : meinside@gmail.com
+# created by : meinside@duck.com
 # last update: 2016.09.21.
 #
 # for broadcasting transmission download complete message
