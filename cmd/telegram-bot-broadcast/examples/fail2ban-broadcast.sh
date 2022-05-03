@@ -2,7 +2,7 @@
 #
 # fail2ban-broadcast.sh
 #
-# created by : meinside@gmail.com
+# created by : meinside@duck.com
 # last update: 2016.04.29.
 #
 # for broadcasting a message on fail2ban's ban action
