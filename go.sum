@@ -2,5 +2,5 @@ github.com/mattn/go-sqlite3 v1.14.16 h1:yOQRA0RpS5PFz/oikGwBEqvAWhWg5ufRz4ETLjwp
 github.com/mattn/go-sqlite3 v1.14.16/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/meinside/rpi-tools v0.2.0 h1:noBjyYWmWoayqHSkSw8LROXqAg+BGELzzzkifrSc54w=
 github.com/meinside/rpi-tools v0.2.0/go.mod h1:GTk8GtC8CLRCzUVBVhL5z/WbSMFkzXFsUIE8FAgeFx4=
-github.com/meinside/telegram-bot-go v0.7.3 h1:crcTsVOsmEeQKC52l7zFvC5E/4RtjgEf+Y9gLxrRER4=
-github.com/meinside/telegram-bot-go v0.7.3/go.mod h1:fo8x0nah9sfQJnylpjOjhEVlLVkSGFAwTmVQOFnX92Y=
+github.com/meinside/telegram-bot-go v0.7.6 h1:WvnIdx09+qMtAK3yIgf9OaG9jjEpgXl0OJzSID+vQS0=
+github.com/meinside/telegram-bot-go v0.7.6/go.mod h1:fo8x0nah9sfQJnylpjOjhEVlLVkSGFAwTmVQOFnX92Y=
