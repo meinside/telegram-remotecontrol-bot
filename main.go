@@ -629,7 +629,7 @@ func main() {
 				if err == nil {
 					if update.HasMessage() {
 						// 'is typing...'
-						b.SendChatAction(update.Message.Chat.ID, bot.ChatActionTyping)
+						b.SendChatAction(update.Message.Chat.ID, bot.ChatActionTyping, nil)
 
 						// process message
 						processUpdate(b, update)
