@@ -18,6 +18,7 @@ import (
 	"github.com/meinside/telegram-bot-remotecontrol/conf"
 	"github.com/meinside/telegram-bot-remotecontrol/helper"
 	"github.com/meinside/telegram-bot-remotecontrol/helper/services/transmission"
+	"github.com/meinside/version-go"
 )
 
 const (
@@ -187,7 +188,7 @@ func getLogs() string {
 
 // for showing current status of this bot
 func getStatus() string {
-	return fmt.Sprintf("app uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s", helper.GetUptime(launched), helper.GetMemoryUsage(), helper.GetDiskUsage(mountPoints))
+	return fmt.Sprintf("app version: %s\napp uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s", version.Minimum(), helper.GetUptime(launched), helper.GetMemoryUsage(), helper.GetDiskUsage(mountPoints))
 }
 
 // parse service command and start/stop given service
