@@ -1,4 +1,4 @@
-package transmission
+package main
 
 import (
 	"bytes"
@@ -11,8 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meinside/telegram-bot-remotecontrol/conf"
-	"github.com/meinside/telegram-bot-remotecontrol/helper"
+	"github.com/meinside/telegram-bot-remotecontrol/consts"
 )
 
 const (
@@ -159,7 +158,7 @@ func GetList(port int, username, passwd string) string {
 					strs[i] = fmt.Sprintf(
 						"*%d*. _%s_ (total %s, *%s*)",
 						t.ID,
-						helper.RemoveMarkdownChars(t.Name, " "),
+						removeMarkdownChars(t.Name, " "),
 						readableSize(t.TotalSize),
 						t.Error,
 					)
@@ -167,7 +166,7 @@ func GetList(port int, username, passwd string) string {
 					strs[i] = fmt.Sprintf(
 						"*%d*. _%s_ (total %s / xferred %s, %.2f%%)",
 						t.ID,
-						helper.RemoveMarkdownChars(t.Name, " "),
+						removeMarkdownChars(t.Name, " "),
 						readableSize(t.TotalSize),
 						readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
 						t.PercentDone*100.0,
@@ -179,7 +178,7 @@ func GetList(port int, username, passwd string) string {
 			return strings.Join(strs, "\n")
 		}
 
-		return conf.MessageTransmissionNoTorrents
+		return consts.MessageTransmissionNoTorrents
 	}
 
 	return err.Error()
