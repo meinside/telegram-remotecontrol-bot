@@ -123,7 +123,7 @@ func getLogs(db *Database) string {
 	}
 
 	for _, log := range logs {
-		lines = append(lines, fmt.Sprintf("%s %s: %s", log.Time.Format("2006-01-02 15:04:05"), log.Type, log.Message))
+		lines = append(lines, fmt.Sprintf("%s %s: %s", log.CreatedAt.Format("2006-01-02 15:04:05"), log.Type, log.Message))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -244,7 +244,8 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 	// check username
 	var userID string
 	if update.Message.From.Username == nil {
-		_stderr.Printf("not allowed, or has no username: %s", update.Message.From.FirstName)
+		logError(db, "has no user name: %s", update.Message.From.FirstName)
+
 		return false
 	}
 	userID = *update.Message.From.Username
@@ -585,7 +586,7 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 						processCallbackQuery(b, config, db, update)
 					}
 				} else {
-					_stderr.Printf("error while receiving update (%s)", err)
+					logError(db, "error while receiving update: %s", err)
 				}
 			})
 		} else {

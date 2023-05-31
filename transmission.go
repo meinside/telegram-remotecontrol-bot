@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -98,7 +98,7 @@ func post(port int, username, passwd string, request rpcRequest, numRetriesLeft 
 					log.Printf("error in RPC server: %s\n", err.Error())
 				}
 
-				res, _ = ioutil.ReadAll(resp.Body)
+				res, _ = io.ReadAll(resp.Body)
 
 				if resp.StatusCode != http.StatusOK {
 					err = fmt.Errorf("HTTP %d (%s)", resp.StatusCode, string(res))
