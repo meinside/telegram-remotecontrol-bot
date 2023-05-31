@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // constants for local database
@@ -31,7 +32,7 @@ type Log struct {
 type Chat struct {
 	gorm.Model
 
-	ChatID int64
+	ChatID int64 `gorm:"uniqueIndex"`
 	UserID string
 }
 
@@ -85,7 +86,7 @@ func (d *Database) GetLogs(latestN int) (result []Log) {
 
 // SaveChat saves chat
 func (d *Database) SaveChat(chatID int64, userID string) {
-	if tx := d.db.Create(&Chat{ChatID: chatID, UserID: userID}); tx.Error != nil {
+	if tx := d.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&Chat{ChatID: chatID, UserID: userID}); tx.Error != nil {
 		log.Printf("* failed to save chat into local database: %s", tx.Error)
 	}
 }
