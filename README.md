@@ -11,9 +11,8 @@ Install Go and generate your Telegram bot's API token.
 ## 1. Install
 
 ```bash
-$ go get -u github.com/mattn/go-sqlite3
-$ go get -d github.com/meinside/telegram-bot-remotecontrol
-$ cd $GOPATH/src/github.com/meinside/telegram-bot-remotecontrol
+$ git clone https://github.com/meinside/telegram-bot-remotecontrol.git
+$ cd telegram-bot-remotecontrol
 $ cp config.json.sample config.json
 $ vi config.json
 ```
@@ -49,7 +48,6 @@ When following values are omitted, default values will be applied:
 ## 2. Build and run
 
 ```bash
-$ cd $GOPATH/src/github.com/meinside/telegram-bot-remotecontrol
 $ go build
 ```
 
@@ -97,10 +95,6 @@ $ $GOPATH/bin/telegram-bot-broadcast "SOME_MESSAGE_TO_BROADCAST"
 ```
 
 then all connected clients who sent at least one message will receive this message.
-
-## 998. Trouble shooting
-
-TODO
 
 ## 999. License
 
