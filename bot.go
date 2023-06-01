@@ -569,23 +569,25 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 				}
 			}(config)
 
+			// set update handlers
+			client.SetMessageHandler(func(b *bot.Bot, update bot.Update, message bot.Message, edited bool) {
+				// 'is typing...'
+				b.SendChatAction(message.Chat.ID, bot.ChatActionTyping, nil)
+
+				// process message
+				processUpdate(b, config, db, launchedAt, update)
+			})
+			client.SetCallbackQueryHandler(func(b *bot.Bot, update bot.Update, callbackQuery bot.CallbackQuery) {
+				// 'is typing...'
+				b.SendChatAction(callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
+
+				// process callback query
+				processCallbackQuery(b, config, db, update)
+			})
+
 			// wait for new updates
 			client.StartMonitoringUpdates(0, config.MonitorInterval, func(b *bot.Bot, update bot.Update, err error) {
-				if err == nil {
-					if update.HasMessage() {
-						// 'is typing...'
-						b.SendChatAction(update.Message.Chat.ID, bot.ChatActionTyping, nil)
-
-						// process message
-						processUpdate(b, config, db, launchedAt, update)
-					} else if update.HasCallbackQuery() {
-						// 'is typing...'
-						b.SendChatAction(update.CallbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
-
-						// process callback query
-						processCallbackQuery(b, config, db, update)
-					}
-				} else {
+				if err != nil {
 					logError(db, "error while receiving update: %s", err)
 				}
 			})
