@@ -586,7 +586,7 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 			})
 
 			// wait for new updates
-			client.StartMonitoringUpdates(0, config.MonitorInterval, func(b *bot.Bot, update bot.Update, err error) {
+			client.StartPollingUpdates(0, config.MonitorInterval, func(b *bot.Bot, update bot.Update, err error) {
 				if err != nil {
 					logError(db, "error while receiving update: %s", err)
 				}
