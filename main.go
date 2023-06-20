@@ -4,7 +4,7 @@ package main
 import (
 	"time"
 
-	"github.com/meinside/telegram-bot-remotecontrol/cfg"
+	"github.com/meinside/telegram-remotecontrol-bot/cfg"
 )
 
 func main() {

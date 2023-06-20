@@ -13,13 +13,13 @@ import (
 	"time"
 
 	bot "github.com/meinside/telegram-bot-go"
-	"github.com/meinside/telegram-bot-remotecontrol/cfg"
-	"github.com/meinside/telegram-bot-remotecontrol/consts"
+	"github.com/meinside/telegram-remotecontrol-bot/cfg"
+	"github.com/meinside/telegram-remotecontrol-bot/consts"
 	"github.com/meinside/version-go"
 )
 
 const (
-	githubPageURL = "https://github.com/meinside/telegram-bot-remotecontrol"
+	githubPageURL = "https://github.com/meinside/telegram-remotecontrol-bot"
 )
 
 type status int16
