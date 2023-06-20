@@ -11,8 +11,8 @@ Install Go and generate your Telegram bot's API token.
 ## 1. Install
 
 ```bash
-$ git clone https://github.com/meinside/telegram-bot-remotecontrol.git
-$ cd telegram-bot-remotecontrol
+$ git clone https://github.com/meinside/telegram-remotecontrol-bot.git
+$ cd telegram-remotecontrol-bot
 $ cp config.json.sample config.json
 $ vi config.json
 ```
@@ -54,7 +54,7 @@ $ go build
 and run it:
 
 ```bash
-$ ./telegram-bot-remotecontrol
+$ ./telegram-remotecontrol-bot
 ```
 
 ## 3. Run as a service
@@ -62,8 +62,8 @@ $ ./telegram-bot-remotecontrol
 ### a. systemd
 
 ```bash
-$ sudo cp systemd/telegram-bot-remotecontrol.service /lib/systemd/system/
-$ sudo vi /lib/systemd/system/telegram-bot-remotecontrol.service
+$ sudo cp systemd/telegram-remotecontrol-bot.service /lib/systemd/system/
+$ sudo vi /lib/systemd/system/telegram-remotecontrol-bot.service
 ```
 
 and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
@@ -71,13 +71,13 @@ and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
 It will launch automatically on boot with:
 
 ```bash
-$ sudo systemctl enable telegram-bot-remotecontrol.service
+$ sudo systemctl enable telegram-remotecontrol-bot.service
 ```
 
 and will start with:
 
 ```bash
-$ sudo systemctl start telegram-bot-remotecontrol.service
+$ sudo systemctl start telegram-remotecontrol-bot.service
 ```
 
 ## 4. Broadcast to all connected clients
@@ -85,7 +85,7 @@ $ sudo systemctl start telegram-bot-remotecontrol.service
 Install command line tool,
 
 ```bash
-$ go get -u github.com/meinside/telegram-bot-remotecontrol/cmd/telegram-bot-broadcast
+$ go get -u github.com/meinside/telegram-remotecontrol-bot/cmd/telegram-bot-broadcast
 ```
 
 and type

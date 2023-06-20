@@ -3,21 +3,21 @@
 # ssh-login-broadcast.sh
 #
 # created by : meinside@duck.com
-# last update: 2016.04.12.
+# last update: 2023.06.20.
 #
 # for broadcasting successful ssh logins
-# through telegram-bot-remotecontrol
-# (github.com/meinside/telegram-bot-remotecontrol)
+# through telegram-remotecontrol-bot
+# (github.com/meinside/telegram-remotecontrol-bot)
 #
 # Usage:
 #
-# 1. setup and run telegram-bot-remotecontrol:
+# 1. setup and run telegram-remotecontrol-bot:
 #
-# https://github.com/meinside/telegram-bot-remotecontrol
+# https://github.com/meinside/telegram-remotecontrol-bot
 #
 # 2. install telegram-bot-broadcast:
 #
-# $ go get -u github.com/meinside/telegram-bot-remotecontrol/cmd/telegram-bot-broadcast
+# $ go get -u github.com/meinside/telegram-remotecontrol-bot/cmd/telegram-bot-broadcast
 #
 # 3. open /etc/pam.d/sshd,
 #   $ sudo vi /etc/pam.d/sshd

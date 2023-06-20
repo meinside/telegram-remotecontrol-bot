@@ -6,13 +6,11 @@ github.com/mattn/go-sqlite3 v1.14.17 h1:mCRHCLDUBXgpKAqIKsaAaAsrAlbkeomtRFKXh2L6
 github.com/mattn/go-sqlite3 v1.14.17/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/meinside/rpi-tools v0.2.0 h1:noBjyYWmWoayqHSkSw8LROXqAg+BGELzzzkifrSc54w=
 github.com/meinside/rpi-tools v0.2.0/go.mod h1:GTk8GtC8CLRCzUVBVhL5z/WbSMFkzXFsUIE8FAgeFx4=
-github.com/meinside/telegram-bot-go v0.9.6 h1:bE51cW2MTD6gTmhp81Twx0x2YfeaOsde+qEG8wXmtUM=
-github.com/meinside/telegram-bot-go v0.9.6/go.mod h1:RzR/y1i7pjalRtwD1vBg8wtkqWR+TI6wwnkTpOy7UJM=
 github.com/meinside/telegram-bot-go v0.9.7 h1:f5EOUGEMkVgb4k+nfYvM5dGLwwFJv5ckvee96uMEfuM=
 github.com/meinside/telegram-bot-go v0.9.7/go.mod h1:RzR/y1i7pjalRtwD1vBg8wtkqWR+TI6wwnkTpOy7UJM=
 github.com/meinside/version-go v0.0.2 h1:No8xR94DxOhnrp49M/RSbQ/eWTt1GcncmrJdk1nHtiM=
 github.com/meinside/version-go v0.0.2/go.mod h1:mFvlwbro1E126u4rU727CcHNa8OPFyhq+KDYYNysFj4=
-gorm.io/driver/sqlite v1.5.1 h1:hYyrLkAWE71bcarJDPdZNTLWtr8XrSjOWyjUYI6xdL4=
-gorm.io/driver/sqlite v1.5.1/go.mod h1:7MZZ2Z8bqyfSQA1gYEV6MagQWj3cpUkJj9Z+d1HEMEQ=
-gorm.io/gorm v1.25.1 h1:nsSALe5Pr+cM3V1qwwQ7rOkw+6UeLrX5O4v3llhHa64=
-gorm.io/gorm v1.25.1/go.mod h1:L4uxeKpfBml98NYqVqwAdmV1a2nBtAec/cf3fpucW/k=
+gorm.io/driver/sqlite v1.5.2 h1:TpQ+/dqCY4uCigCFyrfnrJnrW9zjpelWVoEVNy5qJkc=
+gorm.io/driver/sqlite v1.5.2/go.mod h1:qxAuCol+2r6PannQDpOP1FP6ag3mKi4esLnB/jHed+4=
+gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55 h1:sC1Xj4TYrLqg1n3AN10w871An7wJM0gzgcm8jkIkECQ=
+gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55/go.mod h1:L4uxeKpfBml98NYqVqwAdmV1a2nBtAec/cf3fpucW/k=

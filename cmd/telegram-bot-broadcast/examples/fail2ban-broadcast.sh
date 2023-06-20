@@ -3,11 +3,11 @@
 # fail2ban-broadcast.sh
 #
 # created by : meinside@duck.com
-# last update: 2016.04.29.
+# last update: 2023.06.20.
 #
 # for broadcasting a message on fail2ban's ban action
-# through telegram-bot-remotecontrol
-# (github.com/meinside/telegram-bot-remotecontrol)
+# through telegram-remotecontrol-bot
+# (github.com/meinside/telegram-remotecontrol-bot)
 #
 # Usage:
 #
@@ -15,13 +15,13 @@
 #
 # $ sudo apt-get install curl jq
 #
-# 1. Setup and run telegram-bot-remotecontrol:
+# 1. Setup and run telegram-remotecontrol-bot:
 #
-# https://github.com/meinside/telegram-bot-remotecontrol
+# https://github.com/meinside/telegram-remotecontrol-bot
 #
 # 2. Install telegram-bot-broadcast:
 #
-# $ go get -u github.com/meinside/telegram-bot-remotecontrol/cmd/telegram-bot-broadcast
+# $ go get -u github.com/meinside/telegram-remotecontrol-bot/cmd/telegram-bot-broadcast
 #
 # 3. Duplicate fail2ban's banaction:
 #

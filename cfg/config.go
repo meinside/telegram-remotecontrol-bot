@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/meinside/telegram-bot-remotecontrol/consts"
+	"github.com/meinside/telegram-remotecontrol-bot/consts"
 )
 
 // constants for config

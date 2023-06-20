@@ -1,4 +1,4 @@
-module github.com/meinside/telegram-bot-remotecontrol
+module github.com/meinside/telegram-remotecontrol-bot
 
 go 1.20
 
@@ -6,8 +6,8 @@ require (
 	github.com/meinside/rpi-tools v0.2.0
 	github.com/meinside/telegram-bot-go v0.9.7
 	github.com/meinside/version-go v0.0.2
-	gorm.io/driver/sqlite v1.5.1
-	gorm.io/gorm v1.25.1
+	gorm.io/driver/sqlite v1.5.2
+	gorm.io/gorm v1.25.2-0.20230530020048-26663ab9bf55
 )
 
 require (
