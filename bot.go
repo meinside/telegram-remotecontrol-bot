@@ -243,16 +243,22 @@ func parseTransmissionCommand(config cfg.Config, txt string) (message string, ke
 func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.Time, update bot.Update) bool {
 	// check username
 	var userID string
-	if update.Message.From.Username == nil {
-		logError(db, "has no user name: %s", update.Message.From.FirstName)
+	if from := update.GetFrom(); from == nil {
+		logError(db, "update has no 'from' value")
 
 		return false
-	}
-	userID = *update.Message.From.Username
-	if !isAvailableID(config, userID) {
-		logError(db, "not an allowed id: %s", userID)
+	} else {
+		if from.Username == nil {
+			logError(db, "has no user name: %s", from.FirstName)
 
-		return false
+			return false
+		}
+		userID = *from.Username
+		if !isAvailableID(config, userID) {
+			logError(db, "not an allowed id: %s", userID)
+
+			return false
+		}
 	}
 
 	// save chat id
