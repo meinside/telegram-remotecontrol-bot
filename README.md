@@ -6,14 +6,29 @@ and list/add/remove/delete torrents through your Transmission daemon.
 
 ## 0. Prepare
 
-Install Go and generate your Telegram bot's API token.
+Install Go and [generate your Telegram bot's API token](https://telegram.me/BotFather).
 
 ## 1. Install
 
 ```bash
 $ git clone https://github.com/meinside/telegram-remotecontrol-bot.git
 $ cd telegram-remotecontrol-bot
-$ cp config.json.sample config.json
+$ go build
+```
+
+or
+
+```bash
+$ go install github.com/meinside/telegram-remotecontrol-bot@latest
+```
+
+## 2. Configure
+
+Put your `config.json` file in `$XDG_CONFIG_HOME/telegram-remotecontrol-bot/` directory:
+
+```bash
+$ mkdir -p ~/.config/telegram-remotecontrol-bot/
+$ cp config.json.sample ~/.config/telegram-remotecontrol-bot/config.json
 $ vi config.json
 ```
 
@@ -45,19 +60,18 @@ When following values are omitted, default values will be applied:
 * **transmission_rpc_port**: 9091
 * **transmission_rpc_username** or **transmission_rpc_passwd**: no username and password (eg. when **rpc-authentication-required** = false)
 
-## 2. Build and run
+## 3. Run
 
-```bash
-$ go build
-```
-
-and run it:
+Run the built(or installed) binary with:
 
 ```bash
 $ ./telegram-remotecontrol-bot
+# or
+$ $(go env GOPATH)/bin/telegram-remotecontrol-bot
+
 ```
 
-## 3. Run as a service
+## 4. Run as a service
 
 ### a. systemd
 
@@ -85,13 +99,13 @@ $ sudo systemctl start telegram-remotecontrol-bot.service
 Install command line tool,
 
 ```bash
-$ go get -u github.com/meinside/telegram-remotecontrol-bot/cmd/telegram-bot-broadcast
+$ go install github.com/meinside/telegram-remotecontrol-bot/cmd/telegram-bot-broadcast@latest
 ```
 
-and type
+and run:
 
 ```bash
-$ $GOPATH/bin/telegram-bot-broadcast "SOME_MESSAGE_TO_BROADCAST"
+$ $(go env GOPATH)/bin/telegram-bot-broadcast "SOME_MESSAGE_TO_BROADCAST"
 ```
 
 then all connected clients who sent at least one message will receive this message.

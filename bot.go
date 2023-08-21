@@ -532,7 +532,10 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 	queue := make(chan string, consts.QueueSize)
 
 	// open database
-	db := OpenDB()
+	db, err := OpenDB()
+	if err != nil {
+		_stderr.Fatalf("failed to open database: %s", err)
+	}
 
 	db.Log("starting server...")
 

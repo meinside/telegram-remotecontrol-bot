@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,7 +11,8 @@ import (
 
 // constants for config
 const (
-	ConfigFilename = "config.json"
+	AppName        = "telegram-remotecontrol-bot"
+	configFilename = "config.json"
 )
 
 // Config struct for config file
@@ -27,20 +29,41 @@ type Config struct {
 	IsVerbose               bool     `json:"is_verbose"`
 }
 
+// get .config directory path
+func GetConfigDir() (configDir string, err error) {
+	// https://xdgbasedirectoryspecification.com
+	configDir = os.Getenv("XDG_CONFIG_HOME")
+
+	// If the value of the environment variable is unset, empty, or not an absolute path, use the default
+	if configDir == "" || configDir[0:1] != "/" {
+		var homeDir string
+		if homeDir, err = os.UserHomeDir(); err == nil {
+			configDir = filepath.Join(homeDir, ".config", AppName)
+		}
+	} else {
+		configDir = filepath.Join(configDir, AppName)
+	}
+
+	return configDir, err
+}
+
 // GetConfig reads config and return it
-func GetConfig() (config Config, err error) {
-	var execFilepath string
-	if execFilepath, err = os.Executable(); err == nil {
-		var file []byte
-		if file, err = os.ReadFile(filepath.Join(filepath.Dir(execFilepath), ConfigFilename)); err == nil {
-			var conf Config
-			if err = json.Unmarshal(file, &conf); err == nil {
+func GetConfig() (conf Config, err error) {
+	var configDir string
+	configDir, err = GetConfigDir()
+
+	if err == nil {
+		configFilepath := filepath.Join(configDir, configFilename)
+
+		var bytes []byte
+		if bytes, err = os.ReadFile(configFilepath); err == nil {
+			if err = json.Unmarshal(bytes, &conf); err == nil {
 				// fallback values
-				if config.TransmissionRPCPort <= 0 {
-					config.TransmissionRPCPort = consts.DefaultTransmissionRPCPort
+				if conf.TransmissionRPCPort <= 0 {
+					conf.TransmissionRPCPort = consts.DefaultTransmissionRPCPort
 				}
-				if config.MonitorInterval <= 0 {
-					config.MonitorInterval = consts.DefaultMonitorIntervalSeconds
+				if conf.MonitorInterval <= 0 {
+					conf.MonitorInterval = consts.DefaultMonitorIntervalSeconds
 				}
 
 				return conf, nil
@@ -48,5 +71,5 @@ func GetConfig() (config Config, err error) {
 		}
 	}
 
-	return Config{}, err
+	return conf, fmt.Errorf("failed to load config: %s", err)
 }

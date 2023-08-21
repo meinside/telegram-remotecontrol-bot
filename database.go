@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
+	"github.com/meinside/telegram-remotecontrol-bot/cfg"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -37,23 +38,27 @@ type Chat struct {
 }
 
 // OpenDB opens database and returns it
-func OpenDB() *Database {
-	if execFilepath, err := os.Executable(); err != nil {
-		panic(err)
-	} else {
-		if db, err := gorm.Open(sqlite.Open(filepath.Join(filepath.Dir(execFilepath), dbFilename)), &gorm.Config{}); err != nil {
-			panic("Failed to open database: " + err.Error())
+func OpenDB() (database *Database, err error) {
+	var configDir string
+	configDir, err = cfg.GetConfigDir()
+
+	if err == nil {
+		dbFilepath := filepath.Join(configDir, dbFilename)
+
+		var db *gorm.DB
+		if db, err = gorm.Open(sqlite.Open(dbFilepath), &gorm.Config{}); err != nil {
+			err = fmt.Errorf("gorm failed to open database: %s", err)
 		} else {
 			// migrate tables
-			if err := db.AutoMigrate(&Log{}, &Chat{}); err != nil {
-				panic("Failed to migrate database: " + err.Error())
-			}
-
-			return &Database{
-				db: db,
+			if err = db.AutoMigrate(&Log{}, &Chat{}); err == nil {
+				return &Database{db: db}, nil
+			} else {
+				err = fmt.Errorf("gorm failed to migrate database: %s", err)
 			}
 		}
 	}
+
+	return nil, err
 }
 
 // save log
