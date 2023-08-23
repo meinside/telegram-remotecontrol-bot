@@ -1,8 +1,9 @@
 module github.com/meinside/telegram-remotecontrol-bot
 
-go 1.20
+go 1.21.0
 
 require (
+	github.com/meinside/infisical-go v0.0.12
 	github.com/meinside/rpi-tools v0.2.0
 	github.com/meinside/telegram-bot-go v0.9.9
 	github.com/meinside/version-go v0.0.2

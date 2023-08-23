@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/meinside/infisical-go"
+	"github.com/meinside/infisical-go/helper"
+
 	"github.com/meinside/telegram-remotecontrol-bot/consts"
 )
 
@@ -17,7 +20,6 @@ const (
 
 // Config struct for config file
 type Config struct {
-	APIToken                string   `json:"api_token"`
 	AvailableIDs            []string `json:"available_ids"`
 	ControllableServices    []string `json:"controllable_services,omitempty"`
 	MountPoints             []string `json:"mount_points,omitempty"`
@@ -27,6 +29,22 @@ type Config struct {
 	TransmissionRPCPasswd   string   `json:"transmission_rpc_passwd,omitempty"`
 	CLIPort                 int      `json:"cli_port"`
 	IsVerbose               bool     `json:"is_verbose"`
+
+	APIToken string `json:"api_token,omitempty"`
+
+	// or Infisical settings
+	Infisical *struct {
+		// NOTE: When the workspace's E2EE setting is enabled, APIKey is essential for decryption
+		E2EE   bool    `json:"e2ee,omitempty"`
+		APIKey *string `json:"api_key,omitempty"`
+
+		WorkspaceID string               `json:"workspace_id"`
+		Token       string               `json:"token"`
+		Environment string               `json:"environment"`
+		SecretType  infisical.SecretType `json:"secret_type"`
+
+		APITokenKeyPath string `json:"api_token_key_path"`
+	} `json:"infisical,omitempty"`
 }
 
 // get .config directory path
@@ -58,6 +76,31 @@ func GetConfig() (conf Config, err error) {
 		var bytes []byte
 		if bytes, err = os.ReadFile(configFilepath); err == nil {
 			if err = json.Unmarshal(bytes, &conf); err == nil {
+				if conf.APIToken == "" && conf.Infisical != nil {
+					var apiToken string
+
+					// read access token from infisical
+					if conf.Infisical.E2EE && conf.Infisical.APIKey != nil {
+						apiToken, err = helper.E2EEValue(
+							*conf.Infisical.APIKey,
+							conf.Infisical.WorkspaceID,
+							conf.Infisical.Token,
+							conf.Infisical.Environment,
+							conf.Infisical.SecretType,
+							conf.Infisical.APITokenKeyPath,
+						)
+					} else {
+						apiToken, err = helper.Value(
+							conf.Infisical.WorkspaceID,
+							conf.Infisical.Token,
+							conf.Infisical.Environment,
+							conf.Infisical.SecretType,
+							conf.Infisical.APITokenKeyPath,
+						)
+					}
+					conf.APIToken = apiToken
+				}
+
 				// fallback values
 				if conf.TransmissionRPCPort <= 0 {
 					conf.TransmissionRPCPort = consts.DefaultTransmissionRPCPort
@@ -66,7 +109,7 @@ func GetConfig() (conf Config, err error) {
 					conf.MonitorInterval = consts.DefaultMonitorIntervalSeconds
 				}
 
-				return conf, nil
+				return conf, err
 			}
 		}
 	}
