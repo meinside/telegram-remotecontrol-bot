@@ -8,8 +8,8 @@ github.com/meinside/infisical-go v0.1.1 h1:BrJNSY9i/X1YQLA2yJM1nfQsj0pCYQH6UT+J9
 github.com/meinside/infisical-go v0.1.1/go.mod h1:3RlFkDs6YoYV7nCf9YYbL26mM5sf0MhO3MNAMOjWIXQ=
 github.com/meinside/rpi-tools v0.2.0 h1:noBjyYWmWoayqHSkSw8LROXqAg+BGELzzzkifrSc54w=
 github.com/meinside/rpi-tools v0.2.0/go.mod h1:GTk8GtC8CLRCzUVBVhL5z/WbSMFkzXFsUIE8FAgeFx4=
-github.com/meinside/telegram-bot-go v0.10.0 h1:zFZePLibj9VUGMOuvy/GIjmWgVINXfty0HJvQdR1A2A=
-github.com/meinside/telegram-bot-go v0.10.0/go.mod h1:i9gGJrrfhdAIElC/HCUprMmccGjMKPVq52av4n54Y2s=
+github.com/meinside/telegram-bot-go v0.10.1 h1:MabTKn+eiNzbnVf9V2TB0nxSYctU3NogGw4X6qvRdBY=
+github.com/meinside/telegram-bot-go v0.10.1/go.mod h1:i9gGJrrfhdAIElC/HCUprMmccGjMKPVq52av4n54Y2s=
 github.com/meinside/version-go v0.0.2 h1:No8xR94DxOhnrp49M/RSbQ/eWTt1GcncmrJdk1nHtiM=
 github.com/meinside/version-go v0.0.2/go.mod h1:mFvlwbro1E126u4rU727CcHNa8OPFyhq+KDYYNysFj4=
 gorm.io/driver/sqlite v1.5.4 h1:IqXwXi8M/ZlPzH/947tn5uik3aYQslP9BVveoax0nV0=
