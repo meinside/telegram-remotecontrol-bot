@@ -289,6 +289,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 
 				// XXX - only support: .torrent
 				if strings.HasSuffix(fileURL, ".torrent") {
+					addReaction(b, update, "👌")
 					message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, fileURL)
 				} else {
 					message = consts.MessageUnprocessableFileFormat
@@ -297,6 +298,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 				switch {
 				// magnet url
 				case strings.HasPrefix(txt, "magnet:"):
+					addReaction(b, update, "👌")
 					message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, txt)
 				// /start
 				case strings.HasPrefix(txt, consts.CommandStart):
@@ -383,6 +385,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 					torrent = txt
 				}
 
+				addReaction(b, update, "👌")
 				message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, torrent)
 			}
 
@@ -408,6 +411,18 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 	pool.Unlock()
 
 	return result
+}
+
+// add reaction to a message
+func addReaction(b *bot.Bot, update bot.Update, reaction string) {
+	if !update.HasMessage() {
+		return
+	}
+
+	chatID := update.Message.Chat.ID
+	messageID := update.Message.MessageID
+
+	_ = b.SetMessageReaction(chatID, messageID, bot.OptionsSetMessageReaction{}.SetReaction([]bot.ReactionType{bot.NewEmojiReaction(reaction)}))
 }
 
 // process incoming callback query
