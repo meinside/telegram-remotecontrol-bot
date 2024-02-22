@@ -10,6 +10,8 @@ import (
 	"github.com/meinside/infisical-go/helper"
 
 	"github.com/meinside/telegram-remotecontrol-bot/consts"
+
+	"github.com/tailscale/hujson"
 )
 
 // constants for config
@@ -30,9 +32,10 @@ type Config struct {
 	CLIPort                 int      `json:"cli_port"`
 	IsVerbose               bool     `json:"is_verbose"`
 
+	// Bot API Token,
 	APIToken string `json:"api_token,omitempty"`
 
-	// or Infisical settings
+	// or from Infisical
 	Infisical *struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
@@ -73,34 +76,47 @@ func GetConfig() (conf Config, err error) {
 
 		var bytes []byte
 		if bytes, err = os.ReadFile(configFilepath); err == nil {
-			if err = json.Unmarshal(bytes, &conf); err == nil {
-				if conf.APIToken == "" && conf.Infisical != nil {
-					var apiToken string
+			if bytes, err = standardizeJSON(bytes); err == nil {
+				if err = json.Unmarshal(bytes, &conf); err == nil {
+					if conf.APIToken == "" && conf.Infisical != nil {
+						var apiToken string
 
-					// read access token from infisical
-					apiToken, err = helper.Value(
-						conf.Infisical.ClientID,
-						conf.Infisical.ClientSecret,
-						conf.Infisical.WorkspaceID,
-						conf.Infisical.Environment,
-						conf.Infisical.SecretType,
-						conf.Infisical.APITokenKeyPath,
-					)
-					conf.APIToken = apiToken
-				}
+						// read access token from infisical
+						apiToken, err = helper.Value(
+							conf.Infisical.ClientID,
+							conf.Infisical.ClientSecret,
+							conf.Infisical.WorkspaceID,
+							conf.Infisical.Environment,
+							conf.Infisical.SecretType,
+							conf.Infisical.APITokenKeyPath,
+						)
+						conf.APIToken = apiToken
+					}
 
-				// fallback values
-				if conf.TransmissionRPCPort <= 0 {
-					conf.TransmissionRPCPort = consts.DefaultTransmissionRPCPort
-				}
-				if conf.MonitorInterval <= 0 {
-					conf.MonitorInterval = consts.DefaultMonitorIntervalSeconds
-				}
+					// fallback values
+					if conf.TransmissionRPCPort <= 0 {
+						conf.TransmissionRPCPort = consts.DefaultTransmissionRPCPort
+					}
+					if conf.MonitorInterval <= 0 {
+						conf.MonitorInterval = consts.DefaultMonitorIntervalSeconds
+					}
 
-				return conf, err
+					return conf, err
+				}
 			}
 		}
 	}
 
 	return conf, fmt.Errorf("failed to load config: %s", err)
+}
+
+// standardize given JSON (JWCC) bytes
+func standardizeJSON(b []byte) ([]byte, error) {
+	ast, err := hujson.Parse(b)
+	if err != nil {
+		return b, err
+	}
+	ast.Standardize()
+
+	return ast.Pack(), nil
 }
