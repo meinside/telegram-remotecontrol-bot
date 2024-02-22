@@ -9,6 +9,7 @@ require (
 	github.com/meinside/rpi-tools v0.2.0
 	github.com/meinside/telegram-bot-go v0.10.5
 	github.com/meinside/version-go v0.0.3
+	github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gorm v1.25.7
 )
