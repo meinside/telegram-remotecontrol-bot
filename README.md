@@ -111,8 +111,8 @@ $ $(go env GOPATH)/bin/telegram-remotecontrol-bot
 ### a. systemd
 
 ```bash
-$ sudo cp systemd/telegram-remotecontrol-bot.service /lib/systemd/system/
-$ sudo vi /lib/systemd/system/telegram-remotecontrol-bot.service
+$ sudo cp systemd/telegram-remotecontrol-bot.service /etc/systemd/system/
+$ sudo vi /etc/systemd/system/telegram-remotecontrol-bot.service
 ```
 
 and edit **User**, **Group**, **WorkingDirectory** and **ExecStart** values.
