@@ -279,7 +279,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 
 		var message string
 		options := bot.OptionsSendMessage{}.
-			SetReplyMarkup(defaultReplyMarkup())
+			SetReplyMarkup(defaultReplyMarkup(true))
 
 		switch s.CurrentStatus {
 		case StatusWaiting:
@@ -313,7 +313,6 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 					if len(config.ControllableServices) > 0 {
 						var keyboards [][]bot.InlineKeyboardButton
 						message, keyboards = parseServiceCommand(config, db, txt)
-
 						if keyboards != nil {
 							options.SetReplyMarkup(bot.InlineKeyboardMarkup{
 								InlineKeyboard: keyboards,
@@ -335,15 +334,11 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 							UserID:        userID,
 							CurrentStatus: StatusWaitingTransmissionUpload,
 						}
-						options.SetReplyMarkup(bot.ReplyKeyboardMarkup{
-							Keyboard:       cancelKeyboard,
-							ResizeKeyboard: true,
-						})
+						options.SetReplyMarkup(cancelReplyMarkup(true))
 					}
 				case strings.HasPrefix(txt, consts.CommandTransmissionRemove) || strings.HasPrefix(txt, consts.CommandTransmissionDelete):
 					var keyboards [][]bot.InlineKeyboardButton
 					message, keyboards = parseTransmissionCommand(config, txt)
-
 					if keyboards != nil {
 						options.SetReplyMarkup(bot.InlineKeyboardMarkup{
 							InlineKeyboard: keyboards,
@@ -355,13 +350,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 					message = getLogs(db)
 				case strings.HasPrefix(txt, consts.CommandHelp):
 					message = getHelp()
-					options.SetReplyMarkup(bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
-						InlineKeyboard: [][]bot.InlineKeyboardButton{
-							bot.NewInlineKeyboardButtonsWithURL(map[string]string{
-								"GitHub": githubPageURL,
-							}),
-						},
-					})
+					options.SetReplyMarkup(helpInlineKeyboardMarkup())
 				// fallback
 				default:
 					cmd := removeMarkdownChars(txt, "")
@@ -478,7 +467,7 @@ func broadcast(client *bot.Bot, config cfg.Config, db *Database, message string)
 	for _, chat := range db.GetChats() {
 		if isAvailableID(config, chat.UserID) {
 			options := bot.OptionsSendMessage{}.
-				SetReplyMarkup(defaultReplyMarkup())
+				SetReplyMarkup(defaultReplyMarkup(true))
 
 			if checkMarkdownValidity(message) {
 				options.SetParseMode(bot.ParseModeMarkdown)
@@ -524,10 +513,29 @@ func checkMarkdownValidity(txt string) bool {
 }
 
 // default reply markup for messages
-func defaultReplyMarkup() bot.ReplyKeyboardMarkup {
+func defaultReplyMarkup(resize bool) bot.ReplyKeyboardMarkup {
 	return bot.ReplyKeyboardMarkup{
 		Keyboard:       allKeyboards,
-		ResizeKeyboard: true,
+		ResizeKeyboard: &resize,
+	}
+}
+
+// reply markup for cancel
+func cancelReplyMarkup(resize bool) bot.ReplyKeyboardMarkup {
+	return bot.ReplyKeyboardMarkup{
+		Keyboard:       cancelKeyboard,
+		ResizeKeyboard: &resize,
+	}
+}
+
+// inline keyboard markup for help
+func helpInlineKeyboardMarkup() bot.InlineKeyboardMarkup {
+	return bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
+		InlineKeyboard: [][]bot.InlineKeyboardButton{
+			bot.NewInlineKeyboardButtonsWithURL(map[string]string{
+				"GitHub": githubPageURL,
+			}),
+		},
 	}
 }
 
