@@ -10,8 +10,8 @@ github.com/meinside/infisical-go v0.3.1 h1:uonT58566vEnILAdQnVR3xuJQtJAf6meVcEF/
 github.com/meinside/infisical-go v0.3.1/go.mod h1:djjoLo50nAHY1Ron+/YfLUov9wT0nBVYkWuMvdd63pQ=
 github.com/meinside/rpi-tools v0.2.0 h1:noBjyYWmWoayqHSkSw8LROXqAg+BGELzzzkifrSc54w=
 github.com/meinside/rpi-tools v0.2.0/go.mod h1:GTk8GtC8CLRCzUVBVhL5z/WbSMFkzXFsUIE8FAgeFx4=
-github.com/meinside/telegram-bot-go v0.10.6 h1:kn9sDW4E6Ir9iCUI+ckq4Ob/KelS7ftJXXPbEj2iXTk=
-github.com/meinside/telegram-bot-go v0.10.6/go.mod h1:i9gGJrrfhdAIElC/HCUprMmccGjMKPVq52av4n54Y2s=
+github.com/meinside/telegram-bot-go v0.10.7 h1:j+NrAdqpOaYlGHa9KOHIvxGx4HLyij4Ps85Wmbh/9vc=
+github.com/meinside/telegram-bot-go v0.10.7/go.mod h1:i9gGJrrfhdAIElC/HCUprMmccGjMKPVq52av4n54Y2s=
 github.com/meinside/version-go v0.0.3 h1:GXSwi6sTmgpnSR09jAAqDGWeX2Nq52fe5xpitgAhQfM=
 github.com/meinside/version-go v0.0.3/go.mod h1:mFvlwbro1E126u4rU727CcHNa8OPFyhq+KDYYNysFj4=
 github.com/tailscale/hujson v0.0.0-20221223112325-20486734a56a h1:SJy1Pu0eH1C29XwJucQo73FrleVK6t4kYz4NVhp34Yw=
