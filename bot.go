@@ -178,12 +178,9 @@ func parseServiceCommand(config cfg.Config, db *Database, txt string) (message s
 				keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
 
 				// add cancel button
-				cancel := consts.CommandCancel
 				keyboards = append(keyboards, []bot.InlineKeyboardButton{
-					{
-						Text:         consts.MessageCancel,
-						CallbackData: &cancel,
-					},
+					bot.NewInlineKeyboardButton(consts.MessageCancel).
+						SetCallbackData(consts.CommandCancel),
 				})
 			}
 		}
@@ -221,12 +218,9 @@ func parseTransmissionCommand(config cfg.Config, txt string) (message string, ke
 					keyboards = bot.NewInlineKeyboardButtonsAsRowsWithCallbackData(keys)
 
 					// add cancel button
-					cancel := consts.CommandCancel
 					keyboards = append(keyboards, []bot.InlineKeyboardButton{
-						{
-							Text:         consts.MessageCancel,
-							CallbackData: &cancel,
-						},
+						bot.NewInlineKeyboardButton(consts.MessageCancel).
+							SetCallbackData(consts.CommandCancel),
 					})
 				}
 			}
@@ -314,9 +308,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 						var keyboards [][]bot.InlineKeyboardButton
 						message, keyboards = parseServiceCommand(config, db, txt)
 						if keyboards != nil {
-							options.SetReplyMarkup(bot.InlineKeyboardMarkup{
-								InlineKeyboard: keyboards,
-							})
+							options.SetReplyMarkup(bot.NewInlineKeyboardMarkup(keyboards))
 						}
 					} else {
 						message = consts.MessageNoControllableServices
@@ -340,9 +332,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 					var keyboards [][]bot.InlineKeyboardButton
 					message, keyboards = parseTransmissionCommand(config, txt)
 					if keyboards != nil {
-						options.SetReplyMarkup(bot.InlineKeyboardMarkup{
-							InlineKeyboard: keyboards,
-						})
+						options.SetReplyMarkup(bot.NewInlineKeyboardMarkup(keyboards))
 					}
 				case strings.HasPrefix(txt, consts.CommandStatus):
 					message = getStatus(config, launchedAt)
@@ -411,7 +401,7 @@ func addReaction(b *bot.Bot, update bot.Update, reaction string) {
 	chatID := update.Message.Chat.ID
 	messageID := update.Message.MessageID
 
-	_ = b.SetMessageReaction(chatID, messageID, bot.OptionsSetMessageReaction{}.SetReaction([]bot.ReactionType{bot.NewEmojiReaction(reaction)}))
+	_ = b.SetMessageReaction(chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
 }
 
 // process incoming callback query
@@ -514,29 +504,25 @@ func checkMarkdownValidity(txt string) bool {
 
 // default reply markup for messages
 func defaultReplyMarkup(resize bool) bot.ReplyKeyboardMarkup {
-	return bot.ReplyKeyboardMarkup{
-		Keyboard:       allKeyboards,
-		ResizeKeyboard: &resize,
-	}
+	return bot.NewReplyKeyboardMarkup(allKeyboards).
+		SetResizeKeyboard(resize)
 }
 
 // reply markup for cancel
 func cancelReplyMarkup(resize bool) bot.ReplyKeyboardMarkup {
-	return bot.ReplyKeyboardMarkup{
-		Keyboard:       cancelKeyboard,
-		ResizeKeyboard: &resize,
-	}
+	return bot.NewReplyKeyboardMarkup(cancelKeyboard).
+		SetResizeKeyboard(resize)
 }
 
 // inline keyboard markup for help
 func helpInlineKeyboardMarkup() bot.InlineKeyboardMarkup {
-	return bot.InlineKeyboardMarkup{ // inline keyboard for link to github page
-		InlineKeyboard: [][]bot.InlineKeyboardButton{
+	return bot.NewInlineKeyboardMarkup( // inline keyboard for link to github page
+		[][]bot.InlineKeyboardButton{
 			bot.NewInlineKeyboardButtonsWithURL(map[string]string{
 				"GitHub": githubPageURL,
 			}),
 		},
-	}
+	)
 }
 
 // run bot
