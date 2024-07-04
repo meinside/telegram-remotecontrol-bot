@@ -12,6 +12,6 @@ This bot is only usable for whitelisted users.
 
 ## Data Storage and Retention
 
-* All of the above data are stored in the local database for logging and showing statistics of usages.
-* None of the above data will be transferred elsewhere, with the exception of message texts, which will be sent to Google AI API for the purporse of understanding users' intents.
+* All of the above data are stored in the local database for logging and broadcasting messages to whitelisted users.
+* None of the above data will be transferred elsewhere.
 
