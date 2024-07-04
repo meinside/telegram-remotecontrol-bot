@@ -4,14 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
-	"github.com/meinside/infisical-go"
-	"github.com/meinside/infisical-go/helper"
+	// infisical
+	infisical "github.com/infisical/go-sdk"
+	"github.com/infisical/go-sdk/packages/models"
+
+	// others
+	"github.com/tailscale/hujson"
 
 	"github.com/meinside/telegram-remotecontrol-bot/consts"
-
-	"github.com/tailscale/hujson"
 )
 
 // constants for config
@@ -40,9 +43,9 @@ type Config struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 
-		WorkspaceID string               `json:"workspace_id"`
-		Environment string               `json:"environment"`
-		SecretType  infisical.SecretType `json:"secret_type"`
+		ProjectID   string `json:"project_id"`
+		Environment string `json:"environment"`
+		SecretType  string `json:"secret_type"`
 
 		APITokenKeyPath string `json:"api_token_key_path"`
 	} `json:"infisical,omitempty"`
@@ -79,18 +82,33 @@ func GetConfig() (conf Config, err error) {
 			if bytes, err = standardizeJSON(bytes); err == nil {
 				if err = json.Unmarshal(bytes, &conf); err == nil {
 					if conf.APIToken == "" && conf.Infisical != nil {
-						var apiToken string
+						// read bot token from infisical
+						client := infisical.NewInfisicalClient(infisical.Config{
+							SiteUrl: "https://app.infisical.com",
+						})
 
-						// read access token from infisical
-						apiToken, err = helper.Value(
-							conf.Infisical.ClientID,
-							conf.Infisical.ClientSecret,
-							conf.Infisical.WorkspaceID,
-							conf.Infisical.Environment,
-							conf.Infisical.SecretType,
-							conf.Infisical.APITokenKeyPath,
-						)
-						conf.APIToken = apiToken
+						_, err = client.Auth().UniversalAuthLogin(conf.Infisical.ClientID, conf.Infisical.ClientSecret)
+						if err != nil {
+							return Config{}, fmt.Errorf("failed to authenticate with Infisical: %s", err)
+						}
+
+						var keyPath string
+						var secret models.Secret
+
+						// telegram bot token
+						keyPath = conf.Infisical.APITokenKeyPath
+						secret, err = client.Secrets().Retrieve(infisical.RetrieveSecretOptions{
+							ProjectID:   conf.Infisical.ProjectID,
+							Type:        conf.Infisical.SecretType,
+							Environment: conf.Infisical.Environment,
+							SecretPath:  path.Dir(keyPath),
+							SecretKey:   path.Base(keyPath),
+						})
+						if err == nil {
+							conf.APIToken = secret.SecretValue
+						} else {
+							return Config{}, fmt.Errorf("failed to retrieve `api_token` from Infisical: %s", err)
+						}
 					}
 
 					// fallback values
