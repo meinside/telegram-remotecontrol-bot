@@ -99,7 +99,6 @@ following commands are supported:
 %s : show latest logs of this bot
 %s : show privacy policy of this bot
 %s : show this help message
-%s : show privacy policy of this bot
 `,
 		consts.CommandTransmissionList,
 		consts.CommandTransmissionAdd,
@@ -112,7 +111,6 @@ following commands are supported:
 		consts.CommandLogs,
 		consts.CommandPrivacy,
 		consts.CommandHelp,
-		consts.CommandPrivacy,
 	)
 }
 
