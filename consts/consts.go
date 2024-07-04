@@ -15,11 +15,12 @@ const (
 	DefaultMonitorIntervalSeconds = 3
 
 	// commands
-	CommandStart  = "/start"
-	CommandStatus = "/status"
-	CommandLogs   = "/logs"
-	CommandHelp   = "/help"
-	CommandCancel = "/cancel"
+	CommandStart   = "/start"
+	CommandStatus  = "/status"
+	CommandLogs    = "/logs"
+	CommandHelp    = "/help"
+	CommandCancel  = "/cancel"
+	CommandPrivacy = "/privacy"
 
 	// commands for systemctl
 	CommandServiceStatus = "/servicestatus"

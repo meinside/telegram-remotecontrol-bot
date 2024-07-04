@@ -46,7 +46,7 @@ var pool sessionPool
 var allKeyboards = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(consts.CommandTransmissionList, consts.CommandTransmissionAdd, consts.CommandTransmissionRemove, consts.CommandTransmissionDelete),
 	bot.NewKeyboardButtons(consts.CommandServiceStatus, consts.CommandServiceStart, consts.CommandServiceStop),
-	bot.NewKeyboardButtons(consts.CommandStatus, consts.CommandLogs, consts.CommandHelp),
+	bot.NewKeyboardButtons(consts.CommandStatus, consts.CommandLogs, consts.CommandPrivacy, consts.CommandHelp),
 }
 var cancelKeyboard = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(consts.CommandCancel),
@@ -97,6 +97,7 @@ following commands are supported:
 
 %s : show this bot's status
 %s : show latest logs of this bot
+%s : show privacy policy of this bot
 %s : show this help message
 `,
 		consts.CommandTransmissionList,
@@ -108,8 +109,18 @@ following commands are supported:
 		consts.CommandServiceStop,
 		consts.CommandStatus,
 		consts.CommandLogs,
+		consts.CommandPrivacy,
 		consts.CommandHelp,
 	)
+}
+
+// for showing privacy policy
+func getPrivacyPolicy() string {
+	return fmt.Sprintf(`
+privacy policy:
+
+%s/raw/master/PRIVACY.md
+`, githubPageURL)
 }
 
 // get recent logs
@@ -341,6 +352,8 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 				case strings.HasPrefix(txt, consts.CommandHelp):
 					message = getHelp()
 					options.SetReplyMarkup(helpInlineKeyboardMarkup())
+				case strings.HasPrefix(txt, consts.CommandPrivacy):
+					message = getPrivacyPolicy()
 				// fallback
 				default:
 					cmd := removeMarkdownChars(txt, "")
