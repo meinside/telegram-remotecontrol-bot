@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -83,7 +84,7 @@ func GetConfig() (conf Config, err error) {
 				if err = json.Unmarshal(bytes, &conf); err == nil {
 					if conf.APIToken == "" && conf.Infisical != nil {
 						// read bot token from infisical
-						client := infisical.NewInfisicalClient(infisical.Config{
+						client := infisical.NewInfisicalClient(context.TODO(), infisical.Config{
 							SiteUrl: "https://app.infisical.com",
 						})
 
