@@ -39,7 +39,7 @@ func diskUsage(additionalPaths []string) (usage string) {
 		fs := syscall.Statfs_t{}
 		if err := syscall.Statfs(p, &fs); err == nil {
 			all := fs.Blocks * uint64(fs.Bsize)
-			free := fs.Bfree * uint64(fs.Bsize)
+			free := fs.Bavail * uint64(fs.Bsize)
 			used := all - free
 
 			lines = append(lines, fmt.Sprintf(
