@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -48,12 +49,15 @@ var allKeyboards = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(consts.CommandServiceStatus, consts.CommandServiceStart, consts.CommandServiceStop),
 	bot.NewKeyboardButtons(consts.CommandStatus, consts.CommandLogs, consts.CommandPrivacy, consts.CommandHelp),
 }
+
 var cancelKeyboard = [][]bot.KeyboardButton{
 	bot.NewKeyboardButtons(consts.CommandCancel),
 }
 
-var _stdout = log.New(os.Stdout, "", log.LstdFlags)
-var _stderr = log.New(os.Stderr, "", log.LstdFlags)
+var (
+	_stdout = log.New(os.Stdout, "", log.LstdFlags)
+	_stderr = log.New(os.Stderr, "", log.LstdFlags)
+)
 
 // check if given Telegram id is available
 func isAvailableID(config cfg.Config, id string) bool {
@@ -260,7 +264,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		}
 		userID = *from.Username
 		if !isAvailableID(config, userID) {
-			logError(db, "not an allowed id: %s", userID)
+			logError(db, "not an allowed user id: %s", userID)
 
 			return false
 		}
@@ -392,10 +396,28 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		if checkMarkdownValidity(message) {
 			options.SetParseMode(bot.ParseModeMarkdown)
 		}
-		if sent := b.SendMessage(update.Message.Chat.ID, message, options); sent.Ok {
+		if sent := b.SendMessage(
+			update.Message.Chat.ID,
+			message,
+			options,
+		); sent.Ok {
 			result = true
 		} else {
-			logError(db, "failed to send message: %s", *sent.Description)
+			var errMessageEmpty bot.ErrMessageEmpty
+			var errMessageTooLong bot.ErrMessageTooLong
+			var errNoChatID bot.ErrChatNotFound
+			var errTooManyRequests bot.ErrTooManyRequests
+			if errors.As(sent.Error, &errMessageEmpty) {
+				logError(db, "message is empty")
+			} else if errors.As(sent.Error, &errMessageTooLong) {
+				logError(db, "message is too long: %d bytes", len(message))
+			} else if errors.As(sent.Error, &errNoChatID) {
+				logError(db, "no such chat id: %d", update.Message.Chat.ID)
+			} else if errors.As(sent.Error, &errTooManyRequests) {
+				logError(db, "too many requests")
+			} else {
+				logError(db, "failed to send message: %s", *sent.Description)
+			}
 		}
 	} else {
 		logError(db, "no session for id: %s", userID)
@@ -480,10 +502,24 @@ func broadcast(client *bot.Bot, config cfg.Config, db *Database, message string)
 				message,
 				options,
 			); !sent.Ok {
-				logError(db, "failed to broadcast to chat id %d: %s", chat.ChatID, *sent.Description)
+				var errMessageEmpty bot.ErrMessageEmpty
+				var errMessageTooLong bot.ErrMessageTooLong
+				var errNoChatID bot.ErrChatNotFound
+				var errTooManyRequests bot.ErrTooManyRequests
+				if errors.As(sent.Error, &errMessageEmpty) {
+					logError(db, "broadcast message is empty")
+				} else if errors.As(sent.Error, &errMessageTooLong) {
+					logError(db, "broadcast message is too long: %d bytes", len(message))
+				} else if errors.As(sent.Error, &errNoChatID) {
+					logError(db, "no such chat id for broadcast: %d", chat.ChatID)
+				} else if errors.As(sent.Error, &errTooManyRequests) {
+					logError(db, "too many requests for broadcast")
+				} else {
+					logError(db, "failed to broadcast to chat id %d: %s", chat.ChatID, *sent.Description)
+				}
 			}
 		} else {
-			logError(db, "not an allowed id for boradcasting: %s", chat.UserID)
+			logError(db, "not an allowed user id for boradcasting: %s", chat.UserID)
 		}
 	}
 }
