@@ -49,5 +49,5 @@ const (
 	MessageCanceled                = "Canceled."
 
 	// number of recent logs
-	NumRecentLogs = 16
+	NumRecentLogs = 20
 )
