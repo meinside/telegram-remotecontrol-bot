@@ -61,9 +61,9 @@ func diskUsage(additionalPaths []string) (usage string) {
 // 'Bad Request: Can't parse message text: Can't find end of the entity starting at byte offset ...' errors
 // from the server
 func removeMarkdownChars(original, replaceWith string) string {
-	removed := strings.Replace(original, "*", replaceWith, -1)
-	removed = strings.Replace(removed, "_", replaceWith, -1)
-	removed = strings.Replace(removed, "`", replaceWith, -1)
+	removed := strings.ReplaceAll(original, "*", replaceWith)
+	removed = strings.ReplaceAll(removed, "_", replaceWith)
+	removed = strings.ReplaceAll(removed, "`", replaceWith)
 	return removed
 }
 

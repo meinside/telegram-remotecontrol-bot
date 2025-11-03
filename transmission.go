@@ -15,30 +15,32 @@ import (
 )
 
 const (
-	httpHeaderXTransmissionSessionID = "X-Transmission-Session-Id"
+	httpHeaderXTransmissionSessionID = `X-Transmission-Session-Id`
 	numRetries                       = 3
 )
 
 type rpcRequest struct {
-	Method    string                 `json:"method"`
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
-	Tag       int                    `json:"tag,omitempty"`
+	Method    string         `json:"method"`
+	Arguments map[string]any `json:"arguments,omitempty"`
+	Tag       int            `json:"tag,omitempty"`
 }
 
 type rpcResponse struct {
 	Result    string          `json:"result,omitempty"`
-	Arguments rpcResponseArgs `json:"arguments,omitempty"`
+	Arguments rpcResponseArgs `json:"arguments,omitzero"`
 	Tag       int             `json:"tag,omitempty"`
 }
 
 type rpcResponseArgs struct {
-	TorrentDuplicate interface{}          `json:"torrent-duplicate,omitempty"`
+	TorrentDuplicate any                  `json:"torrent-duplicate,omitempty"`
 	Torrents         []RPCResponseTorrent `json:"torrents,omitempty"`
 }
 
 var torrentFields []string = []string{
 	"id",
 	"name",
+	"rateDownload", // B/s
+	"rateUpload",   // B/s
 	"percentDone",
 	"totalSize",
 	"errorString",
@@ -46,11 +48,13 @@ var torrentFields []string = []string{
 
 // RPCResponseTorrent for torrent response
 type RPCResponseTorrent struct {
-	ID          int     `json:"id"`
-	Name        string  `json:"name"`
-	PercentDone float32 `json:"percentDone"`
-	TotalSize   int64   `json:"totalSize"`
-	Error       string  `json:"errorString"`
+	ID           int     `json:"id"`
+	Name         string  `json:"name"`
+	RateDownload int64   `json:"rateDownload"`
+	RateUpload   int64   `json:"rateUpload"`
+	PercentDone  float32 `json:"percentDone"`
+	TotalSize    int64   `json:"totalSize"`
+	Error        string  `json:"errorString"`
 }
 
 var xTransmissionSessionID string = ""
@@ -129,7 +133,7 @@ func GetTorrents(port int, username, passwd string) (torrents []RPCResponseTorre
 	if output, err = post(port, username, passwd,
 		rpcRequest{
 			Method: "torrent-get",
-			Arguments: map[string]interface{}{
+			Arguments: map[string]any{
 				"fields": torrentFields,
 			},
 		}, numRetries); err == nil {
@@ -153,6 +157,7 @@ func GetList(port int, username, passwd string) string {
 		numTorrents := len(torrents)
 		if numTorrents > 0 {
 			strs := make([]string, numTorrents)
+
 			for i, t := range torrents {
 				if len(t.Error) > 0 {
 					strs[i] = fmt.Sprintf(
@@ -163,13 +168,25 @@ func GetList(port int, username, passwd string) string {
 						t.Error,
 					)
 				} else {
+					stats := []string{
+						fmt.Sprintf("%s/%s",
+							readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
+							readableSize(t.TotalSize),
+						),
+						fmt.Sprintf("%.2f%%", t.PercentDone*100.0),
+					}
+					if t.RateDownload > 0 {
+						stats = append(stats, fmt.Sprintf("↓%s", readableSize(t.RateDownload)))
+					}
+					if t.RateUpload > 0 {
+						stats = append(stats, fmt.Sprintf("↑%s", readableSize(t.RateUpload)))
+					}
+
 					strs[i] = fmt.Sprintf(
-						"*%d*. _%s_ (total %s / xferred %s, %.2f%%)",
+						"*%d*. _%s_ (%s)",
 						t.ID,
 						removeMarkdownChars(t.Name, " "),
-						readableSize(t.TotalSize),
-						readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
-						t.PercentDone*100.0,
+						strings.Join(stats, ", "),
 					)
 				}
 			}
@@ -190,7 +207,7 @@ func AddTorrent(port int, username, passwd, torrent string) string {
 	var err error
 	if output, err = post(port, username, passwd, rpcRequest{
 		Method: "torrent-add",
-		Arguments: map[string]interface{}{
+		Arguments: map[string]any{
 			"filename": torrent,
 		},
 	}, numRetries); err == nil {
@@ -218,7 +235,7 @@ func removeTorrent(port int, username, passwd, torrentID string, deleteLocal boo
 		if output, err := post(port, username, passwd,
 			rpcRequest{
 				Method: "torrent-remove",
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"ids":               []int{numID},
 					"delete-local-data": deleteLocal,
 				},
