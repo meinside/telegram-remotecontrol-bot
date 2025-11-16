@@ -176,10 +176,10 @@ func GetList(port int, username, passwd string) string {
 						fmt.Sprintf("%.2f%%", t.PercentDone*100.0),
 					}
 					if t.RateDownload > 0 {
-						stats = append(stats, fmt.Sprintf("↓%s", readableSize(t.RateDownload)))
+						stats = append(stats, fmt.Sprintf("↓%s/s", readableSize(t.RateDownload)))
 					}
 					if t.RateUpload > 0 {
-						stats = append(stats, fmt.Sprintf("↑%s", readableSize(t.RateUpload)))
+						stats = append(stats, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
 					}
 
 					strs[i] = fmt.Sprintf(
