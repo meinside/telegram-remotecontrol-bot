@@ -19,23 +19,27 @@ const (
 	numRetries                       = 3
 )
 
+// RPC request
 type rpcRequest struct {
 	Method    string         `json:"method"`
 	Arguments map[string]any `json:"arguments,omitempty"`
 	Tag       int            `json:"tag,omitempty"`
 }
 
+// RPC response
 type rpcResponse struct {
 	Result    string          `json:"result,omitempty"`
 	Arguments rpcResponseArgs `json:"arguments,omitzero"`
 	Tag       int             `json:"tag,omitempty"`
 }
 
+// RPC response arguments
 type rpcResponseArgs struct {
 	TorrentDuplicate any                  `json:"torrent-duplicate,omitempty"`
 	Torrents         []RPCResponseTorrent `json:"torrents,omitempty"`
 }
 
+// torrent fields to query
 var torrentFields []string = []string{
 	"id",
 	"name",
@@ -59,7 +63,11 @@ type RPCResponseTorrent struct {
 
 var xTransmissionSessionID string = ""
 
-func getLocalTransmissionRPCURL(port int, username, passwd string) string {
+// generate a RPC url for local transmission server
+func getLocalTransmissionRPCURL(
+	port int,
+	username, passwd string,
+) string {
 	var rpcURL string
 	if len(username) > 0 && len(passwd) > 0 {
 		rpcURL = fmt.Sprintf("http://%s:%s@localhost:%d/transmission/rpc", url.QueryEscape(username), url.QueryEscape(passwd), port)
@@ -72,7 +80,12 @@ func getLocalTransmissionRPCURL(port int, username, passwd string) string {
 // POST to Transmission RPC server
 //
 // https://trac.transmissionbt.com/browser/trunk/extras/rpc-spec.txt
-func post(port int, username, passwd string, request rpcRequest, numRetriesLeft int) (res []byte, err error) {
+func post(
+	port int,
+	username, passwd string,
+	request rpcRequest,
+	numRetriesLeft int,
+) (res []byte, err error) {
 	if numRetriesLeft <= 0 {
 		return res, fmt.Errorf("no more retries for this request: %v", request)
 	}
@@ -87,7 +100,7 @@ func post(port int, username, passwd string, request rpcRequest, numRetriesLeft 
 			var resp *http.Response
 			client := &http.Client{}
 			if resp, err = client.Do(req); err == nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				if resp.StatusCode == http.StatusConflict {
 					if sessionID, exists := resp.Header[httpHeaderXTransmissionSessionID]; exists && len(sessionID) > 0 {
@@ -127,8 +140,11 @@ func post(port int, username, passwd string, request rpcRequest, numRetriesLeft 
 	return res, err
 }
 
-// GetTorrents retrieves torrent objects
-func GetTorrents(port int, username, passwd string) (torrents []RPCResponseTorrent, err error) {
+// GetTorrents retrieves torrent objects.
+func GetTorrents(
+	port int,
+	username, passwd string,
+) (torrents []RPCResponseTorrent, err error) {
 	var output []byte
 	if output, err = post(port, username, passwd,
 		rpcRequest{
@@ -149,8 +165,11 @@ func GetTorrents(port int, username, passwd string) (torrents []RPCResponseTorre
 	return torrents, err
 }
 
-// GetList retrieves the list of transmission
-func GetList(port int, username, passwd string) string {
+// GetList retrieves the list of transmission.
+func GetList(
+	port int,
+	username, passwd string,
+) string {
 	var torrents []RPCResponseTorrent
 	var err error
 	if torrents, err = GetTorrents(port, username, passwd); err == nil {
@@ -202,6 +221,7 @@ func GetList(port int, username, passwd string) string {
 }
 
 // AddTorrent adds a torrent(with magnet or .torrent file) to the list of transmission
+// and returns the resulting string.
 func AddTorrent(port int, username, passwd, torrent string) string {
 	var output []byte
 	var err error
@@ -230,7 +250,12 @@ func AddTorrent(port int, username, passwd, torrent string) string {
 	return fmt.Sprintf("Failed to add given torrent: %s", err)
 }
 
-func removeTorrent(port int, username, passwd, torrentID string, deleteLocal bool) string {
+// remove torrent
+func removeTorrent(
+	port int,
+	username, passwd string,
+	torrentID string, deleteLocal bool,
+) string {
 	if numID, err := strconv.Atoi(torrentID); err == nil {
 		if output, err := post(port, username, passwd,
 			rpcRequest{
@@ -289,12 +314,20 @@ func readableSize(num int64) (str string) {
 	return str
 }
 
-// RemoveTorrent cancels/removes a torrent from the list
-func RemoveTorrent(port int, username, passwd, torrentID string) string {
+// RemoveTorrent cancels/removes a torrent from the list.
+func RemoveTorrent(
+	port int,
+	username, passwd string,
+	torrentID string,
+) string {
 	return removeTorrent(port, username, passwd, torrentID, false)
 }
 
-// DeleteTorrent removes a torrent and its local data from the list
-func DeleteTorrent(port int, username, passwd, torrentID string) string {
+// DeleteTorrent removes a torrent and its local data from the list.
+func DeleteTorrent(
+	port int,
+	username, passwd string,
+	torrentID string,
+) string {
 	return removeTorrent(port, username, passwd, torrentID, true)
 }

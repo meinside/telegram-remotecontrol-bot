@@ -15,13 +15,14 @@ import (
 	// others
 	"github.com/tailscale/hujson"
 
+	// constants
 	"github.com/meinside/telegram-remotecontrol-bot/consts"
 )
 
 // constants for config
 const (
-	AppName        = "telegram-remotecontrol-bot"
-	configFilename = "config.json"
+	AppName        = `telegram-remotecontrol-bot`
+	configFilename = `config.json`
 )
 
 // Config struct for config file
@@ -52,7 +53,7 @@ type Config struct {
 	} `json:"infisical,omitempty"`
 }
 
-// get .config directory path
+// GetConfigDir returns the config file's directory.
 func GetConfigDir() (configDir string, err error) {
 	// https://xdgbasedirectoryspecification.com
 	configDir = os.Getenv("XDG_CONFIG_HOME")
@@ -70,7 +71,7 @@ func GetConfigDir() (configDir string, err error) {
 	return configDir, err
 }
 
-// GetConfig reads config and return it
+// GetConfig reads config file and returns it.
 func GetConfig() (conf Config, err error) {
 	var configDir string
 	configDir, err = GetConfigDir()

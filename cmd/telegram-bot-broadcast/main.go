@@ -12,7 +12,7 @@ import (
 )
 
 func printUsage() {
-	fmt.Printf(`* usage:
+	fmt.Printf(`* Usage:
 
 	$ %[1]s [strings to broadcast]
 `, os.Args[0])
@@ -31,16 +31,19 @@ func main() {
 				cliPort = consts.DefaultCLIPortNumber
 			}
 		} else {
-			fmt.Printf("failed to load config, using default port number: %d (%s)\n", consts.DefaultCLIPortNumber, err)
+			fmt.Printf("Failed to load config, using default port number: %d (%s)\n", consts.DefaultCLIPortNumber, err)
 
 			cliPort = consts.DefaultCLIPortNumber
 		}
 
 		message := strings.Join(args, " ")
 
-		if _, err := http.PostForm(fmt.Sprintf("http://localhost:%d%s", cliPort, consts.HTTPBroadcastPath), url.Values{
-			consts.ParamMessage: {message},
-		}); err != nil {
+		if _, err := http.PostForm(
+			fmt.Sprintf("http://localhost:%d%s", cliPort, consts.HTTPBroadcastPath),
+			url.Values{
+				consts.ParamMessage: {message},
+			},
+		); err != nil {
 			fmt.Printf("*** %s\n", err)
 		}
 	} else {
