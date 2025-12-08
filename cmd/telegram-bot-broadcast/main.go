@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,7 +26,7 @@ func main() {
 		var cliPort int
 
 		// read port number from config file
-		if config, err := cfg.GetConfig(); err == nil {
+		if config, err := cfg.GetConfig(context.TODO()); err == nil {
 			cliPort = config.CLIPort
 			if cliPort <= 0 {
 				cliPort = consts.DefaultCLIPortNumber
