@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +23,8 @@ import (
 
 const (
 	githubPageURL = "https://github.com/meinside/telegram-remotecontrol-bot"
+
+	requestTimeoutSeconds = 60
 )
 
 type status int16
@@ -61,22 +65,12 @@ var (
 
 // check if given Telegram id is available
 func isAvailableID(config cfg.Config, id string) bool {
-	for _, v := range config.AvailableIDs {
-		if v == id {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(config.AvailableIDs, id)
 }
 
 // check if given service is controllable
 func isControllableService(controllableServices []string, service string) bool {
-	for _, v := range controllableServices {
-		if v == service {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(controllableServices, service)
 }
 
 // for showing help message
@@ -293,7 +287,11 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		switch s.CurrentStatus {
 		case StatusWaiting:
 			if update.Message.Document != nil { // if a file is received,
-				fileResult := b.GetFile(update.Message.Document.FileID)
+				// get file
+				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+				defer cancel()
+				fileResult := b.GetFile(ctx, update.Message.Document.FileID)
+
 				fileURL := b.GetFileURL(*fileResult.Result)
 
 				// XXX - only support: .torrent
@@ -375,7 +373,11 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 			default:
 				var torrent string
 				if update.Message.Document != nil {
-					fileResult := b.GetFile(update.Message.Document.FileID)
+					// get file
+					ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+					defer cancel()
+					fileResult := b.GetFile(ctx, update.Message.Document.FileID)
+
 					torrent = b.GetFileURL(*fileResult.Result)
 				} else {
 					torrent = txt
@@ -393,10 +395,13 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		}
 
 		// send message
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+		defer cancel()
 		if checkMarkdownValidity(message) {
 			options.SetParseMode(bot.ParseModeMarkdown)
 		}
 		if sent := b.SendMessage(
+			ctx,
 			update.Message.Chat.ID,
 			message,
 			options,
@@ -436,7 +441,10 @@ func addReaction(b *bot.Bot, update bot.Update, reaction string) {
 	chatID := update.Message.Chat.ID
 	messageID := update.Message.MessageID
 
-	_ = b.SetMessageReaction(chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
+	// add reaction
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+	defer cancel()
+	_ = b.SetMessageReaction(ctx, chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
 }
 
 // process incoming callback query
@@ -461,17 +469,22 @@ func processCallbackQuery(b *bot.Bot, config cfg.Config, db *Database, update bo
 	}
 
 	// answer callback query
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+	defer cancel()
 	options := bot.OptionsAnswerCallbackQuery{}
 	if len(message) > 0 {
 		options.SetText(message)
 	}
-	if apiResult := b.AnswerCallbackQuery(query.ID, options); apiResult.Ok {
+	if apiResult := b.AnswerCallbackQuery(ctx, query.ID, options); apiResult.Ok {
 		if len(message) <= 0 {
 			message = consts.MessageCanceled
 		}
 
 		// edit message and remove inline keyboards
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+		defer cancel()
 		if apiResult := b.EditMessageText(
+			ctx,
 			message,
 			bot.OptionsEditMessageText{}.
 				SetIDs(query.Message.Chat.ID, query.Message.MessageID),
@@ -491,13 +504,15 @@ func processCallbackQuery(b *bot.Bot, config cfg.Config, db *Database, update bo
 func broadcast(client *bot.Bot, config cfg.Config, db *Database, message string) {
 	for _, chat := range db.GetChats() {
 		if isAvailableID(config, chat.UserID) {
+			ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+			defer cancel()
 			options := bot.OptionsSendMessage{}.
 				SetReplyMarkup(defaultReplyMarkup(true))
-
 			if checkMarkdownValidity(message) {
 				options.SetParseMode(bot.ParseModeMarkdown)
 			}
 			if sent := client.SendMessage(
+				ctx,
 				chat.ChatID,
 				message,
 				options,
@@ -610,11 +625,15 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 	client.Verbose = config.IsVerbose
 
 	// get info about this bot
-	if me := client.GetMe(); me.Ok {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+	defer cancel()
+	if me := client.GetMe(ctx); me.Ok {
 		_stdout.Printf("launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
-		if unhooked := client.DeleteWebhook(false); unhooked.Ok {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+		defer cancel()
+		if unhooked := client.DeleteWebhook(ctx, false); unhooked.Ok {
 			// wait for CLI message channel
 			go func() {
 				// broadcast messages from CLI
@@ -639,14 +658,18 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 			// set update handlers
 			client.SetMessageHandler(func(b *bot.Bot, update bot.Update, message bot.Message, edited bool) {
 				// 'is typing...'
-				b.SendChatAction(message.Chat.ID, bot.ChatActionTyping, nil)
+				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+				defer cancel()
+				b.SendChatAction(ctx, message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process message
 				processUpdate(b, config, db, launchedAt, update)
 			})
 			client.SetCallbackQueryHandler(func(b *bot.Bot, update bot.Update, callbackQuery bot.CallbackQuery) {
 				// 'is typing...'
-				b.SendChatAction(callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
+				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
+				defer cancel()
+				b.SendChatAction(ctx, callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process callback query
 				processCallbackQuery(b, config, db, update)
