@@ -24,7 +24,8 @@ import (
 const (
 	githubPageURL = "https://github.com/meinside/telegram-remotecontrol-bot"
 
-	requestTimeoutSeconds = 60
+	requestTimeoutSeconds          = 60
+	ignorableRequestTimeoutSeconds = 5
 )
 
 type status int16
@@ -138,7 +139,10 @@ func getLogs(db *Database) string {
 }
 
 // for showing current status of this bot
-func getStatus(config cfg.Config, launchedAt time.Time) string {
+func getStatus(
+	config cfg.Config,
+	launchedAt time.Time,
+) string {
 	return fmt.Sprintf("app version: %s\napp uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s",
 		version.Minimum(),
 		uptimeSince(launchedAt),
@@ -148,7 +152,11 @@ func getStatus(config cfg.Config, launchedAt time.Time) string {
 }
 
 // parse service command and start/stop given service
-func parseServiceCommand(config cfg.Config, db *Database, txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
+func parseServiceCommand(
+	config cfg.Config,
+	db *Database,
+	txt string,
+) (message string, keyboards [][]bot.InlineKeyboardButton) {
 	message = consts.MessageNoControllableServices
 
 	for _, cmd := range []string{consts.CommandServiceStart, consts.CommandServiceStop} {
@@ -200,7 +208,10 @@ func parseServiceCommand(config cfg.Config, db *Database, txt string) (message s
 }
 
 // parse transmission command
-func parseTransmissionCommand(config cfg.Config, txt string) (message string, keyboards [][]bot.InlineKeyboardButton) {
+func parseTransmissionCommand(
+	config cfg.Config,
+	txt string,
+) (message string, keyboards [][]bot.InlineKeyboardButton) {
 	if torrents, _ := GetTorrents(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd); len(torrents) > 0 {
 		for _, cmd := range []string{consts.CommandTransmissionRemove, consts.CommandTransmissionDelete} {
 			if strings.HasPrefix(txt, cmd) {
@@ -243,7 +254,14 @@ func parseTransmissionCommand(config cfg.Config, txt string) (message string, ke
 }
 
 // process incoming update from Telegram
-func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.Time, update bot.Update) bool {
+func processUpdate(
+	ctx context.Context,
+	b *bot.Bot,
+	config cfg.Config,
+	db *Database,
+	launchedAt time.Time,
+	update bot.Update,
+) bool {
 	// check username
 	var userID string
 	if from := update.GetFrom(); from == nil {
@@ -287,16 +305,16 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		switch s.CurrentStatus {
 		case StatusWaiting:
 			if update.Message.Document != nil { // if a file is received,
-				// get file
-				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-				defer cancel()
-				fileResult := b.GetFile(ctx, update.Message.Document.FileID)
+				// get file info
+				ctxFileInfo, cancelFileInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+				defer cancelFileInfo()
+				fileResult := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
 
 				fileURL := b.GetFileURL(*fileResult.Result)
 
 				// XXX - only support: .torrent
 				if strings.HasSuffix(fileURL, ".torrent") {
-					addReaction(b, update, "👌")
+					addReaction(ctx, b, update, "👌")
 					message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, fileURL)
 				} else {
 					message = consts.MessageUnprocessableFileFormat
@@ -305,7 +323,7 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 				switch {
 				// magnet url
 				case strings.HasPrefix(txt, "magnet:"):
-					addReaction(b, update, "👌")
+					addReaction(ctx, b, update, "👌")
 					message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, txt)
 				// /start
 				case strings.HasPrefix(txt, consts.CommandStart):
@@ -373,17 +391,17 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 			default:
 				var torrent string
 				if update.Message.Document != nil {
-					// get file
-					ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-					defer cancel()
-					fileResult := b.GetFile(ctx, update.Message.Document.FileID)
+					// get file info
+					ctxFileInfo, cancelFileInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+					defer cancelFileInfo()
+					fileResult := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
 
 					torrent = b.GetFileURL(*fileResult.Result)
 				} else {
 					torrent = txt
 				}
 
-				addReaction(b, update, "👌")
+				addReaction(ctx, b, update, "👌")
 				message = AddTorrent(config.TransmissionRPCPort, config.TransmissionRPCUsername, config.TransmissionRPCPasswd, torrent)
 			}
 
@@ -395,13 +413,13 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 		}
 
 		// send message
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-		defer cancel()
+		ctxSend, cancelSend := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+		defer cancelSend()
 		if checkMarkdownValidity(message) {
 			options.SetParseMode(bot.ParseModeMarkdown)
 		}
 		if sent := b.SendMessage(
-			ctx,
+			ctxSend,
 			update.Message.Chat.ID,
 			message,
 			options,
@@ -433,7 +451,12 @@ func processUpdate(b *bot.Bot, config cfg.Config, db *Database, launchedAt time.
 }
 
 // add reaction to a message
-func addReaction(b *bot.Bot, update bot.Update, reaction string) {
+func addReaction(
+	ctx context.Context,
+	b *bot.Bot,
+	update bot.Update,
+	reaction string,
+) {
 	if !update.HasMessage() {
 		return
 	}
@@ -442,13 +465,19 @@ func addReaction(b *bot.Bot, update bot.Update, reaction string) {
 	messageID := update.Message.MessageID
 
 	// add reaction
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-	defer cancel()
-	_ = b.SetMessageReaction(ctx, chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
+	ctxReaction, cancelReaction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
+	defer cancelReaction()
+	_ = b.SetMessageReaction(ctxReaction, chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
 }
 
 // process incoming callback query
-func processCallbackQuery(b *bot.Bot, config cfg.Config, db *Database, update bot.Update) (result bool) {
+func processCallbackQuery(
+	ctx context.Context,
+	b *bot.Bot,
+	config cfg.Config,
+	db *Database,
+	update bot.Update,
+) (result bool) {
 	query := *update.CallbackQuery
 	txt := *query.Data
 
@@ -469,22 +498,22 @@ func processCallbackQuery(b *bot.Bot, config cfg.Config, db *Database, update bo
 	}
 
 	// answer callback query
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-	defer cancel()
 	options := bot.OptionsAnswerCallbackQuery{}
 	if len(message) > 0 {
 		options.SetText(message)
 	}
-	if apiResult := b.AnswerCallbackQuery(ctx, query.ID, options); apiResult.Ok {
+	ctxAnswer, cancelAnswer := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+	defer cancelAnswer()
+	if apiResult := b.AnswerCallbackQuery(ctxAnswer, query.ID, options); apiResult.Ok {
 		if len(message) <= 0 {
 			message = consts.MessageCanceled
 		}
 
 		// edit message and remove inline keyboards
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-		defer cancel()
+		ctxEdit, cancelEdit := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+		defer cancelEdit()
 		if apiResult := b.EditMessageText(
-			ctx,
+			ctxEdit,
 			message,
 			bot.OptionsEditMessageText{}.
 				SetIDs(query.Message.Chat.ID, query.Message.MessageID),
@@ -501,18 +530,24 @@ func processCallbackQuery(b *bot.Bot, config cfg.Config, db *Database, update bo
 }
 
 // broadcast a messge to given chats
-func broadcast(client *bot.Bot, config cfg.Config, db *Database, message string) {
+func broadcast(
+	ctx context.Context,
+	client *bot.Bot,
+	config cfg.Config,
+	db *Database,
+	message string,
+) {
 	for _, chat := range db.GetChats() {
 		if isAvailableID(config, chat.UserID) {
-			ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-			defer cancel()
 			options := bot.OptionsSendMessage{}.
 				SetReplyMarkup(defaultReplyMarkup(true))
 			if checkMarkdownValidity(message) {
 				options.SetParseMode(bot.ParseModeMarkdown)
 			}
+			ctxSend, cancelSend := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+			defer cancelSend()
 			if sent := client.SendMessage(
-				ctx,
+				ctxSend,
 				chat.ChatID,
 				message,
 				options,
@@ -590,7 +625,11 @@ func helpInlineKeyboardMarkup() bot.InlineKeyboardMarkup {
 }
 
 // run bot
-func runBot(config cfg.Config, launchedAt time.Time) {
+func runBot(
+	ctx context.Context,
+	config cfg.Config,
+	launchedAt time.Time,
+) {
 	// initialize variables
 	sessions := make(map[string]session)
 	for _, v := range config.AvailableIDs {
@@ -625,20 +664,20 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 	client.Verbose = config.IsVerbose
 
 	// get info about this bot
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-	defer cancel()
-	if me := client.GetMe(ctx); me.Ok {
+	ctxBotInfo, cancelBotInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+	defer cancelBotInfo()
+	if me := client.GetMe(ctxBotInfo); me.Ok {
 		_stdout.Printf("launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
-		ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-		defer cancel()
-		if unhooked := client.DeleteWebhook(ctx, false); unhooked.Ok {
+		ctxDeleteWebhook, cancelDeleteWebhook := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
+		defer cancelDeleteWebhook()
+		if unhooked := client.DeleteWebhook(ctxDeleteWebhook, false); unhooked.Ok {
 			// wait for CLI message channel
 			go func() {
 				// broadcast messages from CLI
 				for message := range queue {
-					broadcast(client, config, db, message)
+					broadcast(ctx, client, config, db, message)
 				}
 			}()
 
@@ -658,21 +697,21 @@ func runBot(config cfg.Config, launchedAt time.Time) {
 			// set update handlers
 			client.SetMessageHandler(func(b *bot.Bot, update bot.Update, message bot.Message, edited bool) {
 				// 'is typing...'
-				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-				defer cancel()
-				b.SendChatAction(ctx, message.Chat.ID, bot.ChatActionTyping, nil)
+				ctxAction, cancelAction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
+				defer cancelAction()
+				_ = b.SendChatAction(ctxAction, message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process message
-				processUpdate(b, config, db, launchedAt, update)
+				processUpdate(ctx, b, config, db, launchedAt, update)
 			})
 			client.SetCallbackQueryHandler(func(b *bot.Bot, update bot.Update, callbackQuery bot.CallbackQuery) {
 				// 'is typing...'
-				ctx, cancel := context.WithTimeout(context.Background(), requestTimeoutSeconds*time.Second)
-				defer cancel()
-				b.SendChatAction(ctx, callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
+				ctxAction, cancelAction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
+				defer cancelAction()
+				_ = b.SendChatAction(ctxAction, callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process callback query
-				processCallbackQuery(b, config, db, update)
+				processCallbackQuery(ctx, b, config, db, update)
 			})
 
 			// wait for new updates

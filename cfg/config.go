@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	// infisical
 	infisical "github.com/infisical/go-sdk"
@@ -21,8 +22,11 @@ import (
 
 // constants for config
 const (
-	AppName        = `telegram-remotecontrol-bot`
+	AppName = `telegram-remotecontrol-bot`
+
 	configFilename = `config.json`
+
+	infisicalTimeoutSeconds = 30
 )
 
 // Config struct for config file
@@ -72,7 +76,7 @@ func GetConfigDir() (configDir string, err error) {
 }
 
 // GetConfig reads config file and returns it.
-func GetConfig() (conf Config, err error) {
+func GetConfig(ctx context.Context) (conf Config, err error) {
 	var configDir string
 	configDir, err = GetConfigDir()
 
@@ -84,8 +88,11 @@ func GetConfig() (conf Config, err error) {
 			if bytes, err = standardizeJSON(bytes); err == nil {
 				if err = json.Unmarshal(bytes, &conf); err == nil {
 					if conf.APIToken == "" && conf.Infisical != nil {
+						ctxInfisical, cancelInfisical := context.WithTimeout(ctx, infisicalTimeoutSeconds*time.Second)
+						defer cancelInfisical()
+
 						// read bot token from infisical
-						client := infisical.NewInfisicalClient(context.TODO(), infisical.Config{
+						client := infisical.NewInfisicalClient(ctxInfisical, infisical.Config{
 							SiteUrl: "https://app.infisical.com",
 						})
 

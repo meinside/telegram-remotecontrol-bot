@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/meinside/telegram-remotecontrol-bot/cfg"
@@ -10,10 +11,12 @@ import (
 func main() {
 	launchedAt := time.Now()
 
+	ctx := context.Background()
+
 	// read config file,
-	if config, err := cfg.GetConfig(); err == nil {
+	if config, err := cfg.GetConfig(ctx); err == nil {
 		// and run the bot with it
-		runBot(config, launchedAt)
+		runBot(ctx, config, launchedAt)
 	} else {
 		panic(err)
 	}
