@@ -42,6 +42,7 @@ type rpcResponseArgs struct {
 // torrent fields to query
 var torrentFields []string = []string{
 	"id",
+	"status",
 	"name",
 	"rateDownload", // B/s
 	"rateUpload",   // B/s
@@ -52,16 +53,51 @@ var torrentFields []string = []string{
 
 // RPCResponseTorrent for torrent response
 type RPCResponseTorrent struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	RateDownload int64   `json:"rateDownload"`
-	RateUpload   int64   `json:"rateUpload"`
-	PercentDone  float32 `json:"percentDone"`
-	TotalSize    int64   `json:"totalSize"`
-	Error        string  `json:"errorString"`
+	ID           int           `json:"id"`
+	Status       TorrentStatus `json:"status"`
+	Name         string        `json:"name"`
+	RateDownload int64         `json:"rateDownload"`
+	RateUpload   int64         `json:"rateUpload"`
+	PercentDone  float32       `json:"percentDone"`
+	TotalSize    int64         `json:"totalSize"`
+	Error        string        `json:"errorString"`
 }
 
+type TorrentStatus int
+
+const (
+	TorrentStatusStopped                 TorrentStatus = 0
+	TorrentStatusQueuedToVerifyLocalData TorrentStatus = 1
+	TorrentStatusVerifyingLocalData      TorrentStatus = 2
+	TorrentStatusQueuedToDownload        TorrentStatus = 3
+	TorrentStatusDownloading             TorrentStatus = 4
+	TorrentStatusQueuedToSeed            TorrentStatus = 5
+	TorrentStatusSeeding                 TorrentStatus = 6
+)
+
 var xTransmissionSessionID string = ""
+
+// convert torrent status to string
+func statusToString(s TorrentStatus) string {
+	switch s {
+	case TorrentStatusStopped:
+		return `Stopped`
+	case TorrentStatusQueuedToVerifyLocalData:
+		return `Queued to verify local data`
+	case TorrentStatusVerifyingLocalData:
+		return `Verifying local data`
+	case TorrentStatusQueuedToDownload:
+		return `Queued to download`
+	case TorrentStatusDownloading:
+		return `Downloading`
+	case TorrentStatusQueuedToSeed:
+		return `Queued to seed`
+	case TorrentStatusSeeding:
+		return `Seeding`
+	default:
+		return `Unknown`
+	}
+}
 
 // generate a RPC url for local transmission server
 func getLocalTransmissionRPCURL(
@@ -146,13 +182,18 @@ func GetTorrents(
 	username, passwd string,
 ) (torrents []RPCResponseTorrent, err error) {
 	var output []byte
-	if output, err = post(port, username, passwd,
+	if output, err = post(
+		port,
+		username,
+		passwd,
 		rpcRequest{
 			Method: "torrent-get",
 			Arguments: map[string]any{
 				"fields": torrentFields,
 			},
-		}, numRetries); err == nil {
+		},
+		numRetries,
+	); err == nil {
 		var result rpcResponse
 		if err = json.Unmarshal(output, &result); err == nil {
 			if result.Result == "success" {
@@ -175,43 +216,75 @@ func GetList(
 	if torrents, err = GetTorrents(port, username, passwd); err == nil {
 		numTorrents := len(torrents)
 		if numTorrents > 0 {
-			strs := make([]string, numTorrents)
+			lines := []string{}
 
-			for i, t := range torrents {
+			for _, t := range torrents {
 				if len(t.Error) > 0 {
-					strs[i] = fmt.Sprintf(
-						"*%d*. _%s_ (total %s, *%s*)",
+					lines = append(lines, fmt.Sprintf(
+						`*%d*. _%s_
+  ┖ (%s) *%s*`,
 						t.ID,
 						removeMarkdownChars(t.Name, " "),
 						readableSize(t.TotalSize),
 						t.Error,
-					)
+					))
 				} else {
-					stats := []string{
-						fmt.Sprintf("%s/%s",
-							readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
-							readableSize(t.TotalSize),
-						),
-						fmt.Sprintf("%.2f%%", t.PercentDone*100.0),
+					details := []string{}
+
+					switch t.Status {
+					case TorrentStatusSeeding:
+						details = append(
+							details,
+							fmt.Sprintf(
+								"%s %s",
+								statusToString(t.Status),
+								readableSize(t.TotalSize),
+							),
+						)
+						if t.RateUpload > 0 {
+							details = append(details, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
+						}
+					case TorrentStatusDownloading, TorrentStatusStopped:
+						details = append(
+							details,
+							fmt.Sprintf(
+								"%s %s/%s (%.2f%%)",
+								statusToString(t.Status),
+								readableSize(int64(float64(t.TotalSize)*float64(t.PercentDone))),
+								readableSize(t.TotalSize),
+								t.PercentDone*100.0,
+							),
+						)
+						if t.RateDownload > 0 {
+							details = append(details, fmt.Sprintf("↓%s/s", readableSize(t.RateDownload)))
+						}
+						if t.RateUpload > 0 {
+							details = append(details, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
+						}
+					default:
+						details = append(
+							details,
+							statusToString(t.Status),
+						)
 					}
-					if t.RateDownload > 0 {
-						stats = append(stats, fmt.Sprintf("↓%s/s", readableSize(t.RateDownload)))
-					}
-					if t.RateUpload > 0 {
-						stats = append(stats, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
+					// prepend spaces to details
+					for i := range details {
+						details[i] = `  ┖ ` + details[i]
 					}
 
-					strs[i] = fmt.Sprintf(
-						"*%d*. _%s_ (%s)",
+					lines = append(lines, fmt.Sprintf(
+						`*%d*. _%s_
+%s`,
 						t.ID,
 						removeMarkdownChars(t.Name, " "),
-						strings.Join(stats, ", "),
-					)
+						strings.Join(details, " "),
+					))
 				}
 			}
-			strs = append(strs, "--")
-			strs = append(strs, fmt.Sprintf("total %d torrent(s)", numTorrents))
-			return strings.Join(strs, "\n")
+			lines = append(lines, `----`)
+			lines = append(lines, fmt.Sprintf("total %d torrent(s)", numTorrents))
+
+			return strings.Join(lines, "\n")
 		}
 
 		return consts.MessageTransmissionNoTorrents
