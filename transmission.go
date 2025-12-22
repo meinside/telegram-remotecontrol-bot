@@ -255,11 +255,15 @@ func GetList(
 								t.PercentDone*100.0,
 							),
 						)
+						updown := []string{}
 						if t.RateDownload > 0 {
-							details = append(details, fmt.Sprintf("↓%s/s", readableSize(t.RateDownload)))
+							updown = append(updown, fmt.Sprintf("↓%s/s", readableSize(t.RateDownload)))
 						}
 						if t.RateUpload > 0 {
-							details = append(details, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
+							updown = append(updown, fmt.Sprintf("↑%s/s", readableSize(t.RateUpload)))
+						}
+						if len(updown) > 0 {
+							details = append(details, strings.Join(updown, " "))
 						}
 					default:
 						details = append(
@@ -277,7 +281,7 @@ func GetList(
 %s`,
 						t.ID,
 						removeMarkdownChars(t.Name, " "),
-						strings.Join(details, " "),
+						strings.Join(details, "\n"),
 					))
 				}
 			}
