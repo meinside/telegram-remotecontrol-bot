@@ -81,21 +81,21 @@ var xTransmissionSessionID string = ""
 func statusToString(s TorrentStatus) string {
 	switch s {
 	case TorrentStatusStopped:
-		return `Stopped`
+		return `⛔` // Stopped
 	case TorrentStatusQueuedToVerifyLocalData:
-		return `Queued to verify local data`
+		return `⏳🔍` // Queued to verify local data
 	case TorrentStatusVerifyingLocalData:
-		return `Verifying local data`
+		return `🔍` // Verifying local data
 	case TorrentStatusQueuedToDownload:
-		return `Queued to download`
+		return `⏳📥` // Queued to download
 	case TorrentStatusDownloading:
-		return `Downloading`
+		return `📥` // Downloading
 	case TorrentStatusQueuedToSeed:
-		return `Queued to seed`
+		return `⏳🌱` // Queued to seed
 	case TorrentStatusSeeding:
-		return `Seeding`
+		return `🌱` // Seeding
 	default:
-		return `Unknown`
+		return `❓` // Unknown
 	}
 }
 
