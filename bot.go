@@ -332,7 +332,7 @@ func processUpdate(
 				case strings.HasPrefix(txt, consts.CommandServiceStatus):
 					statuses, _ := systemctlStatus(config.ControllableServices)
 					for service, status := range statuses {
-						message += fmt.Sprintf("%s: *%s*\n", service, status)
+						message += fmt.Sprintf("┖ %s: *%s*\n", service, status)
 					}
 				case strings.HasPrefix(txt, consts.CommandServiceStart) || strings.HasPrefix(txt, consts.CommandServiceStop):
 					if len(config.ControllableServices) > 0 {
