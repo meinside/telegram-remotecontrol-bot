@@ -308,7 +308,7 @@ func processUpdate(
 				// get file info
 				ctxFileInfo, cancelFileInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 				defer cancelFileInfo()
-				fileResult := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
+				fileResult, _ := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
 
 				fileURL := b.GetFileURL(*fileResult.Result)
 
@@ -394,7 +394,7 @@ func processUpdate(
 					// get file info
 					ctxFileInfo, cancelFileInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 					defer cancelFileInfo()
-					fileResult := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
+					fileResult, _ := b.GetFile(ctxFileInfo, update.Message.Document.FileID)
 
 					torrent = b.GetFileURL(*fileResult.Result)
 				} else {
@@ -418,25 +418,25 @@ func processUpdate(
 		if checkMarkdownValidity(message) {
 			options.SetParseMode(bot.ParseModeMarkdown)
 		}
-		if sent := b.SendMessage(
+		if sent, err := b.SendMessage(
 			ctxSend,
 			update.Message.Chat.ID,
 			message,
 			options,
-		); sent.Ok {
+		); sent.OK {
 			result = true
 		} else {
 			var errMessageEmpty bot.ErrMessageEmpty
 			var errMessageTooLong bot.ErrMessageTooLong
 			var errNoChatID bot.ErrChatNotFound
 			var errTooManyRequests bot.ErrTooManyRequests
-			if errors.As(sent.Error, &errMessageEmpty) {
+			if errors.As(err, &errMessageEmpty) {
 				logError(db, "message is empty")
-			} else if errors.As(sent.Error, &errMessageTooLong) {
+			} else if errors.As(err, &errMessageTooLong) {
 				logError(db, "message is too long: %d bytes", len(message))
-			} else if errors.As(sent.Error, &errNoChatID) {
+			} else if errors.As(err, &errNoChatID) {
 				logError(db, "no such chat id: %d", update.Message.Chat.ID)
-			} else if errors.As(sent.Error, &errTooManyRequests) {
+			} else if errors.As(err, &errTooManyRequests) {
 				logError(db, "too many requests")
 			} else {
 				logError(db, "failed to send message: %s", *sent.Description)
@@ -467,7 +467,7 @@ func addReaction(
 	// add reaction
 	ctxReaction, cancelReaction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
 	defer cancelReaction()
-	_ = b.SetMessageReaction(ctxReaction, chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
+	_, _ = b.SetMessageReaction(ctxReaction, chatID, messageID, bot.NewMessageReactionWithEmoji(reaction))
 }
 
 // process incoming callback query
@@ -504,7 +504,7 @@ func processCallbackQuery(
 	}
 	ctxAnswer, cancelAnswer := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 	defer cancelAnswer()
-	if apiResult := b.AnswerCallbackQuery(ctxAnswer, query.ID, options); apiResult.Ok {
+	if apiResult, _ := b.AnswerCallbackQuery(ctxAnswer, query.ID, options); apiResult.OK {
 		if len(message) <= 0 {
 			message = consts.MessageCanceled
 		}
@@ -512,12 +512,12 @@ func processCallbackQuery(
 		// edit message and remove inline keyboards
 		ctxEdit, cancelEdit := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 		defer cancelEdit()
-		if apiResult := b.EditMessageText(
+		if apiResult, _ := b.EditMessageText(
 			ctxEdit,
 			message,
 			bot.OptionsEditMessageText{}.
 				SetIDs(query.Message.Chat.ID, query.Message.MessageID),
-		); apiResult.Ok {
+		); apiResult.OK {
 			result = true
 		} else {
 			logError(db, "failed to edit message text: %s", *apiResult.Description)
@@ -546,23 +546,23 @@ func broadcast(
 			}
 			ctxSend, cancelSend := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 			defer cancelSend()
-			if sent := client.SendMessage(
+			if sent, err := client.SendMessage(
 				ctxSend,
 				chat.ChatID,
 				message,
 				options,
-			); !sent.Ok {
+			); !sent.OK {
 				var errMessageEmpty bot.ErrMessageEmpty
 				var errMessageTooLong bot.ErrMessageTooLong
 				var errNoChatID bot.ErrChatNotFound
 				var errTooManyRequests bot.ErrTooManyRequests
-				if errors.As(sent.Error, &errMessageEmpty) {
+				if errors.As(err, &errMessageEmpty) {
 					logError(db, "broadcast message is empty")
-				} else if errors.As(sent.Error, &errMessageTooLong) {
+				} else if errors.As(err, &errMessageTooLong) {
 					logError(db, "broadcast message is too long: %d bytes", len(message))
-				} else if errors.As(sent.Error, &errNoChatID) {
+				} else if errors.As(err, &errNoChatID) {
 					logError(db, "no such chat id for broadcast: %d", chat.ChatID)
-				} else if errors.As(sent.Error, &errTooManyRequests) {
+				} else if errors.As(err, &errTooManyRequests) {
 					logError(db, "too many requests for broadcast")
 				} else {
 					logError(db, "failed to broadcast to chat id %d: %s", chat.ChatID, *sent.Description)
@@ -666,13 +666,13 @@ func runBot(
 	// get info about this bot
 	ctxBotInfo, cancelBotInfo := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 	defer cancelBotInfo()
-	if me := client.GetMe(ctxBotInfo); me.Ok {
+	if me, _ := client.GetMe(ctxBotInfo); me.OK {
 		_stdout.Printf("launching bot: @%s (%s)", *me.Result.Username, me.Result.FirstName)
 
 		// delete webhook (getting updates will not work when wehbook is set up)
 		ctxDeleteWebhook, cancelDeleteWebhook := context.WithTimeout(ctx, requestTimeoutSeconds*time.Second)
 		defer cancelDeleteWebhook()
-		if unhooked := client.DeleteWebhook(ctxDeleteWebhook, false); unhooked.Ok {
+		if unhooked, _ := client.DeleteWebhook(ctxDeleteWebhook, false); unhooked.OK {
 			// wait for CLI message channel
 			go func() {
 				// broadcast messages from CLI
@@ -699,7 +699,7 @@ func runBot(
 				// 'is typing...'
 				ctxAction, cancelAction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
 				defer cancelAction()
-				_ = b.SendChatAction(ctxAction, message.Chat.ID, bot.ChatActionTyping, nil)
+				_, _ = b.SendChatAction(ctxAction, message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process message
 				processUpdate(ctx, b, config, db, launchedAt, update)
@@ -708,7 +708,7 @@ func runBot(
 				// 'is typing...'
 				ctxAction, cancelAction := context.WithTimeout(ctx, ignorableRequestTimeoutSeconds*time.Second)
 				defer cancelAction()
-				_ = b.SendChatAction(ctxAction, callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
+				_, _ = b.SendChatAction(ctxAction, callbackQuery.Message.Chat.ID, bot.ChatActionTyping, nil)
 
 				// process callback query
 				processCallbackQuery(ctx, b, config, db, update)
