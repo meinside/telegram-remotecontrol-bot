@@ -50,13 +50,57 @@ var pool sessionPool
 
 // keyboards
 var allKeyboards = [][]bot.KeyboardButton{
-	bot.NewKeyboardButtons(consts.CommandTransmissionList, consts.CommandTransmissionAdd, consts.CommandTransmissionRemove, consts.CommandTransmissionDelete),
-	bot.NewKeyboardButtons(consts.CommandServiceStatus, consts.CommandServiceStart, consts.CommandServiceStop),
-	bot.NewKeyboardButtons(consts.CommandStatus, consts.CommandLogs, consts.CommandPrivacy, consts.CommandHelp),
+	{
+		{
+			Text: consts.CommandTransmissionList,
+		},
+		{
+			Text: consts.CommandTransmissionAdd,
+		},
+		{
+			Text:  consts.CommandTransmissionRemove,
+			Style: ptr(bot.KeyboardStyleDanger),
+		},
+		{
+			Text:  consts.CommandTransmissionDelete,
+			Style: ptr(bot.KeyboardStyleDanger),
+		},
+	},
+	{
+		{
+			Text: consts.CommandServiceStatus,
+		},
+		{
+			Text: consts.CommandServiceStart,
+		},
+		{
+			Text:  consts.CommandServiceStop,
+			Style: ptr(bot.KeyboardStyleDanger),
+		},
+	},
+	{
+		{
+			Text: consts.CommandStatus,
+		},
+		{
+			Text: consts.CommandLogs,
+		},
+		{
+			Text: consts.CommandPrivacy,
+		},
+		{
+			Text: consts.CommandHelp,
+		},
+	},
 }
 
 var cancelKeyboard = [][]bot.KeyboardButton{
-	bot.NewKeyboardButtons(consts.CommandCancel),
+	{
+		{
+			Text:  consts.CommandCancel,
+			Style: ptr(bot.KeyboardStyleDanger),
+		},
+	},
 }
 
 var (
@@ -197,7 +241,8 @@ func parseServiceCommand(
 				// add cancel button
 				keyboards = append(keyboards, []bot.InlineKeyboardButton{
 					bot.NewInlineKeyboardButton(consts.MessageCancel).
-						SetCallbackData(consts.CommandCancel),
+						SetCallbackData(consts.CommandCancel).
+						SetStyle(bot.KeyboardStyleDanger),
 				})
 			}
 		}
@@ -240,7 +285,8 @@ func parseTransmissionCommand(
 					// add cancel button
 					keyboards = append(keyboards, []bot.InlineKeyboardButton{
 						bot.NewInlineKeyboardButton(consts.MessageCancel).
-							SetCallbackData(consts.CommandCancel),
+							SetCallbackData(consts.CommandCancel).
+							SetStyle(bot.KeyboardStyleDanger),
 					})
 				}
 			}
