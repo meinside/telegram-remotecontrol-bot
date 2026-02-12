@@ -106,8 +106,3 @@ func sudoRunCmd(cmdAndParams []string) (string, error) {
 	output, err := exec.Command("sudo", cmdAndParams...).CombinedOutput()
 	return strings.TrimRight(string(output), "\n"), err
 }
-
-// returns a pointer to the given value
-func ptr[T any](value T) *T {
-	return &value
-}

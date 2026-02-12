@@ -1,6 +1,6 @@
 module github.com/meinside/telegram-remotecontrol-bot
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/infisical/go-sdk v0.6.8

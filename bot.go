@@ -59,11 +59,11 @@ var allKeyboards = [][]bot.KeyboardButton{
 		},
 		{
 			Text:  consts.CommandTransmissionRemove,
-			Style: ptr(bot.KeyboardStyleDanger),
+			Style: new(bot.KeyboardStyleDanger),
 		},
 		{
 			Text:  consts.CommandTransmissionDelete,
-			Style: ptr(bot.KeyboardStyleDanger),
+			Style: new(bot.KeyboardStyleDanger),
 		},
 	},
 	{
@@ -75,7 +75,7 @@ var allKeyboards = [][]bot.KeyboardButton{
 		},
 		{
 			Text:  consts.CommandServiceStop,
-			Style: ptr(bot.KeyboardStyleDanger),
+			Style: new(bot.KeyboardStyleDanger),
 		},
 	},
 	{
@@ -98,7 +98,7 @@ var cancelKeyboard = [][]bot.KeyboardButton{
 	{
 		{
 			Text:  consts.CommandCancel,
-			Style: ptr(bot.KeyboardStyleDanger),
+			Style: new(bot.KeyboardStyleDanger),
 		},
 	},
 }
