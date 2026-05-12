@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	githubPageURL = "https://github.com/meinside/telegram-remotecontrol-bot"
+	githubPageURL = `https://github.com/meinside/telegram-remotecontrol-bot`
 
 	requestTimeoutSeconds          = 60
 	ignorableRequestTimeoutSeconds = 5
@@ -52,7 +52,8 @@ var pool sessionPool
 var allKeyboards = [][]bot.KeyboardButton{
 	{
 		{
-			Text: consts.CommandTransmissionList,
+			Text:  consts.CommandTransmissionList,
+			Style: new(bot.KeyboardStylePrimary),
 		},
 		{
 			Text: consts.CommandTransmissionAdd,
@@ -68,7 +69,8 @@ var allKeyboards = [][]bot.KeyboardButton{
 	},
 	{
 		{
-			Text: consts.CommandServiceStatus,
+			Text:  consts.CommandServiceStatus,
+			Style: new(bot.KeyboardStylePrimary),
 		},
 		{
 			Text: consts.CommandServiceStart,
@@ -120,7 +122,8 @@ func isControllableService(controllableServices []string, service string) bool {
 
 // for showing help message
 func getHelp() string {
-	return fmt.Sprintf(`
+	return fmt.Sprintf(
+		`
 following commands are supported:
 
 *for transmission*
@@ -187,7 +190,8 @@ func getStatus(
 	config cfg.Config,
 	launchedAt time.Time,
 ) string {
-	return fmt.Sprintf("app version: %s\napp uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s",
+	return fmt.Sprintf(
+		"app version: %s\napp uptime: %s\napp memory usage: %s\nsystem disk usage:\n%s",
 		version.Minimum(),
 		uptimeSince(launchedAt),
 		memoryUsage(),
