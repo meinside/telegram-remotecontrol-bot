@@ -56,7 +56,8 @@ var allKeyboards = [][]bot.KeyboardButton{
 			Style: new(bot.KeyboardStylePrimary),
 		},
 		{
-			Text: consts.CommandTransmissionAdd,
+			Text:  consts.CommandTransmissionAdd,
+			Style: new(bot.KeyboardStyleSuccess),
 		},
 		{
 			Text:  consts.CommandTransmissionRemove,
@@ -73,7 +74,8 @@ var allKeyboards = [][]bot.KeyboardButton{
 			Style: new(bot.KeyboardStylePrimary),
 		},
 		{
-			Text: consts.CommandServiceStart,
+			Text:  consts.CommandServiceStart,
+			Style: new(bot.KeyboardStyleSuccess),
 		},
 		{
 			Text:  consts.CommandServiceStop,
@@ -82,7 +84,8 @@ var allKeyboards = [][]bot.KeyboardButton{
 	},
 	{
 		{
-			Text: consts.CommandStatus,
+			Text:  consts.CommandStatus,
+			Style: new(bot.KeyboardStylePrimary),
 		},
 		{
 			Text: consts.CommandLogs,
